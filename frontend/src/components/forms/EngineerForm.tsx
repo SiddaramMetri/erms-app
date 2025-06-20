@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -36,13 +36,13 @@ const EngineerForm: React.FC<EngineerFormProps> = ({
   const { showToast } = useToast();
   
   const [formData, setFormData] = useState<FormData>({
-    name: engineer?.name || '',
-    email: engineer?.email || '',
+    name: '',
+    email: '',
     password: '',
-    skills: engineer?.skills || [],
-    seniority: engineer?.seniority || 'junior',
-    maxCapacity: engineer?.maxCapacity || 100,
-    department: engineer?.department || ''
+    skills: [],
+    seniority: 'junior',
+    maxCapacity: 100,
+    department: ''
   });
 
   const [newSkill, setNewSkill] = useState('');
@@ -51,6 +51,39 @@ const EngineerForm: React.FC<EngineerFormProps> = ({
   const [isLoading, setIsLoading] = useState(false);
 
   const isEditing = !!engineer;
+
+  // Update form data when modal opens or engineer changes
+  useEffect(() => {
+    if (isOpen) {
+      if (engineer) {
+        // Pre-fill form with engineer data for editing
+        setFormData({
+          name: engineer.name || '',
+          email: engineer.email || '',
+          password: '',
+          skills: engineer.skills || [],
+          seniority: engineer.seniority || 'junior',
+          maxCapacity: engineer.maxCapacity || 100,
+          department: engineer.department || ''
+        });
+      } else {
+        // Reset form for new engineer
+        setFormData({
+          name: '',
+          email: '',
+          password: '',
+          skills: [],
+          seniority: 'junior',
+          maxCapacity: 100,
+          department: ''
+        });
+      }
+      // Clear any existing errors when opening
+      setErrors({});
+      setNewSkill('');
+      setSkillLevel('intermediate');
+    }
+  }, [engineer, isOpen]);
 
   const validateForm = (): boolean => {
     const validationRules = {
@@ -87,9 +120,15 @@ const EngineerForm: React.FC<EngineerFormProps> = ({
       let response;
       if (isEditing) {
         // Update existing engineer
+        // Clean skills array to remove any _id fields that may exist from database
+        const cleanSkills = formData.skills.map(skill => ({
+          skill: skill.skill,
+          level: skill.level
+        }));
+        
         const updateData = {
           name: formData.name,
-          skills: formData.skills,
+          skills: cleanSkills,
           seniority: formData.seniority,
           maxCapacity: formData.maxCapacity,
           department: formData.department
@@ -97,8 +136,15 @@ const EngineerForm: React.FC<EngineerFormProps> = ({
         response = await engineerService.updateEngineer(engineer!._id, updateData);
       } else {
         // Create new engineer via registration
+        // Clean skills array to ensure consistent format
+        const cleanSkills = formData.skills.map(skill => ({
+          skill: skill.skill,
+          level: skill.level
+        }));
+        
         const submitData: CreateEngineerData = {
           ...formData,
+          skills: cleanSkills,
           role: 'engineer' as const
         };
         response = await engineerService.createEngineer(submitData);
@@ -110,9 +156,9 @@ const EngineerForm: React.FC<EngineerFormProps> = ({
           title: isEditing ? 'Engineer Updated' : 'Engineer Created',
           message: `${formData.name} has been ${isEditing ? 'updated' : 'created'} successfully.`
         });
+        resetForm();
         onSuccess();
         onClose();
-        resetForm();
       } else {
         setErrors({ submit: response.message || 'Something went wrong' });
       }
@@ -140,7 +186,9 @@ const EngineerForm: React.FC<EngineerFormProps> = ({
       department: ''
     });
     setNewSkill('');
+    setSkillLevel('intermediate');
     setErrors({});
+    setIsLoading(false);
   };
 
   const addSkill = () => {
@@ -168,9 +216,8 @@ const EngineerForm: React.FC<EngineerFormProps> = ({
   const handleClose = () => {
     if (!isLoading) {
       onClose();
-      if (!isEditing) {
-        resetForm();
-      }
+      // Always reset form when closing to ensure clean state
+      resetForm();
     }
   };
 
@@ -203,9 +250,13 @@ const EngineerForm: React.FC<EngineerFormProps> = ({
               type="email"
               value={formData.email}
               onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-              placeholder="engineer@company.com"
+              placeholder="engineer@gmail.com"
               className={errors.email ? 'border-red-500' : ''}
+              disabled={isEditing}
             />
+            {isEditing && (
+              <p className="text-xs text-gray-500">Email cannot be changed when editing</p>
+            )}
             {errors.email && <p className="text-sm text-red-600">{errors.email}</p>}
           </div>
         </div>

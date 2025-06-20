@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
@@ -12,50 +12,51 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-
-// Mock data for engineer assignments
-const mockAssignments = [
-  {
-    id: '1',
-    projectName: 'E-commerce Platform',
-    role: 'Frontend Developer',
-    allocation: 60,
-    startDate: '2024-01-15',
-    endDate: '2024-03-15',
-    status: 'active',
-    progress: 65,
-    description: 'Building the user interface for the new e-commerce platform'
-  },
-  {
-    id: '2',
-    projectName: 'Analytics Dashboard',
-    role: 'React Developer',
-    allocation: 25,
-    startDate: '2024-02-01',
-    endDate: '2024-04-01',
-    status: 'active',
-    progress: 40,
-    description: 'Developing data visualization components'
-  },
-  {
-    id: '3',
-    projectName: 'Mobile App Backend',
-    role: 'Full Stack Developer',
-    allocation: 40,
-    startDate: '2024-03-01',
-    endDate: '2024-05-01',
-    status: 'upcoming',
-    progress: 0,
-    description: 'API development for mobile application'
-  }
-];
+import { assignmentService } from '@/services/assignmentService';
+import { useToast } from '@/components/ui/toast';
+import type { Assignment } from '@/types';
 
 const EngineerDashboard: React.FC = () => {
   const { user } = useAuth();
-  
-  const activeAssignments = mockAssignments.filter(a => a.status === 'active');
-  const upcomingAssignments = mockAssignments.filter(a => a.status === 'upcoming');
-  const totalAllocation = activeAssignments.reduce((sum, a) => sum + a.allocation, 0);
+  const { showToast } = useToast();
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadAssignments = async () => {
+      if (!user) return;
+      
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const response = await assignmentService.getCurrentAssignments();
+        if (response.success && response.data) {
+          setAssignments(response.data.assignments || []);
+        } else {
+          throw new Error('Failed to load assignments');
+        }
+      } catch (err) {
+        console.error('Error loading assignments:', err);
+        const errorMessage = (err as Error).message;
+        setError(errorMessage);
+        showToast({
+          type: 'error',
+          title: 'Error',
+          message: 'Failed to load your assignments'
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadAssignments();
+  }, [user, showToast]);
+
+  const activeAssignments = assignments.filter(a => a.status === 'active');
+  const upcomingAssignments = assignments.filter(a => a.status !== 'active' && a.status !== 'completed');
+  const totalAllocation = activeAssignments.reduce((sum, a) => sum + (a.allocationPercentage || 0), 0);
   const availableCapacity = (user?.maxCapacity || 100) - totalAllocation;
 
   const formatDate = (dateString: string) => {
@@ -153,40 +154,43 @@ const EngineerDashboard: React.FC = () => {
                 <p>No active assignments</p>
               </div>
             ) : (
-              activeAssignments.map((assignment) => (
-                <div key={assignment.id} className="border border-gray-200 rounded-lg p-4">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex-1">
-                      <h4 className="font-semibold text-gray-900">{assignment.projectName}</h4>
-                      <p className="text-sm text-gray-600 mt-1">{assignment.description}</p>
-                      <div className="flex items-center mt-2 space-x-4 text-sm text-gray-500">
-                        <div className="flex items-center">
-                          <User className="h-4 w-4 mr-1" />
-                          {assignment.role}
-                        </div>
-                        <div className="flex items-center">
-                          <Calendar className="h-4 w-4 mr-1" />
-                          {formatDate(assignment.startDate)} - {formatDate(assignment.endDate)}
-                        </div>
-                        <div className="flex items-center">
-                          <Clock className="h-4 w-4 mr-1" />
-                          {assignment.allocation}% allocation
+              activeAssignments.map((assignment) => {
+                const projectName = typeof assignment.projectId === 'object' ? assignment.projectId.name : 'Project';
+                return (
+                  <div key={assignment._id} className="border border-gray-200 rounded-lg p-4">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-gray-900">{projectName}</h4>
+                        <p className="text-sm text-gray-600 mt-1">{assignment.notes || 'No description available'}</p>
+                        <div className="flex items-center mt-2 space-x-4 text-sm text-gray-500">
+                          <div className="flex items-center">
+                            <User className="h-4 w-4 mr-1" />
+                            {assignment.role}
+                          </div>
+                          <div className="flex items-center">
+                            <Calendar className="h-4 w-4 mr-1" />
+                            {formatDate(assignment.startDate.toString())} - {formatDate(assignment.endDate.toString())}
+                          </div>
+                          <div className="flex items-center">
+                            <Clock className="h-4 w-4 mr-1" />
+                            {assignment.allocationPercentage}% allocation
+                          </div>
                         </div>
                       </div>
+                      <Badge variant={assignment.status === 'active' ? 'default' : 'secondary'}>
+                        {assignment.status}
+                      </Badge>
                     </div>
-                    <Badge variant={assignment.status === 'active' ? 'default' : 'secondary'}>
-                      {assignment.status}
-                    </Badge>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600">Progress</span>
-                      <span className="font-medium">{assignment.progress}%</span>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-600">Progress</span>
+                        <span className="font-medium">{assignment.completionPercentage || 0}%</span>
+                      </div>
+                      <Progress value={assignment.completionPercentage || 0} className="h-2" />
                     </div>
-                    <Progress value={assignment.progress} className="h-2" />
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </CardContent>
@@ -201,33 +205,36 @@ const EngineerDashboard: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {upcomingAssignments.map((assignment) => (
-                <div key={assignment.id} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <h4 className="font-semibold text-gray-900">{assignment.projectName}</h4>
-                      <p className="text-sm text-gray-600 mt-1">{assignment.description}</p>
-                      <div className="flex items-center mt-2 space-x-4 text-sm text-gray-500">
-                        <div className="flex items-center">
-                          <User className="h-4 w-4 mr-1" />
-                          {assignment.role}
-                        </div>
-                        <div className="flex items-center">
-                          <Calendar className="h-4 w-4 mr-1" />
-                          Starts {formatDate(assignment.startDate)}
-                        </div>
-                        <div className="flex items-center">
-                          <Clock className="h-4 w-4 mr-1" />
-                          {assignment.allocation}% allocation
+              {upcomingAssignments.map((assignment) => {
+                const projectName = typeof assignment.projectId === 'object' ? assignment.projectId.name : 'Project';
+                return (
+                  <div key={assignment._id} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-gray-900">{projectName}</h4>
+                        <p className="text-sm text-gray-600 mt-1">{assignment.notes || 'No description available'}</p>
+                        <div className="flex items-center mt-2 space-x-4 text-sm text-gray-500">
+                          <div className="flex items-center">
+                            <User className="h-4 w-4 mr-1" />
+                            {assignment.role}
+                          </div>
+                          <div className="flex items-center">
+                            <Calendar className="h-4 w-4 mr-1" />
+                            Starts {formatDate(assignment.startDate.toString())}
+                          </div>
+                          <div className="flex items-center">
+                            <Clock className="h-4 w-4 mr-1" />
+                            {assignment.allocationPercentage}% allocation
+                          </div>
                         </div>
                       </div>
+                      <Badge variant="outline">
+                        {assignment.status}
+                      </Badge>
                     </div>
-                    <Badge variant="outline">
-                      {assignment.status}
-                    </Badge>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </CardContent>
         </Card>

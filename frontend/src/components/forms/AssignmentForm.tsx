@@ -16,6 +16,7 @@ interface AssignmentFormProps {
   onClose: () => void;
   onSuccess: () => void;
   assignment?: Assignment | null;
+  preSelectedEngineerId?: string;
 }
 
 interface FormData {
@@ -32,12 +33,13 @@ const AssignmentForm: React.FC<AssignmentFormProps> = ({
   isOpen,
   onClose,
   onSuccess,
-  assignment
+  assignment,
+  preSelectedEngineerId
 }) => {
   const { showToast } = useToast();
   
   const [formData, setFormData] = useState<FormData>({
-    engineerId: assignment?.engineerId || '',
+    engineerId: assignment?.engineerId || preSelectedEngineerId || '',
     projectId: assignment?.projectId || '',
     allocationPercentage: assignment?.allocationPercentage || 50,
     startDate: assignment?.startDate ? new Date(assignment.startDate).toISOString().split('T')[0] : '',
@@ -98,8 +100,15 @@ const AssignmentForm: React.FC<AssignmentFormProps> = ({
   useEffect(() => {
     if (isOpen) {
       loadData();
+      // Reset form data when opening with preselected engineer
+      if (preSelectedEngineerId && !assignment) {
+        setFormData(prev => ({
+          ...prev,
+          engineerId: preSelectedEngineerId
+        }));
+      }
     }
-  }, [isOpen, loadData]);
+  }, [isOpen, loadData, preSelectedEngineerId, assignment]);
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};

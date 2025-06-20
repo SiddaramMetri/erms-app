@@ -519,7 +519,9 @@ const Engineers: React.FC = () => {
         }}
         onSuccess={() => {
           fetchEngineers();
+          setSelectedEngineer(null);
         }}
+        preSelectedEngineerId={selectedEngineer?._id}
       />
 
       {/* Assignment Progress Update Modal */}

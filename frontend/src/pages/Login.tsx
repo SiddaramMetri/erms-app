@@ -101,12 +101,36 @@ const Login: React.FC = () => {
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? "Signing In..." : "Sign In"}
               </Button>
-              <div className="text-sm text-gray-600 space-y-1">
-                <p>
-                  <strong>Demo Accounts:</strong>
+              <div className="bg-slate-50 rounded-lg p-4">
+                <p className="text-sm font-semibold text-slate-700 flex items-center">
+                  <Users className="h-4 w-4 mr-2 text-blue-600" />
+                  Demo Accounts
                 </p>
-                <p>Manager: manager@company.com / password</p>
-                <p>Engineer: engineer@company.com / password</p>
+                <div className="grid grid-cols-2 gap-2 mt-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEmail('manager@gmail.com');
+                      setPassword('password123');
+                    }}
+                    className="text-left p-2 bg-white rounded border hover:bg-blue-50 hover:border-blue-300 transition-colors"
+                  >
+                    <div className="text-sm font-medium text-slate-900">Manager Account</div>
+                    <div className="text-xs text-slate-500">manager@gmail.com / password123</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEmail('engineer@gmail.com');
+                      setPassword('password123');
+                    }}
+                    className="text-left p-2 bg-white rounded border hover:bg-green-50 hover:border-green-300 transition-colors"
+                  >
+                    <div className="text-sm font-medium text-slate-900">Engineer Account</div>
+                    <div className="text-xs text-slate-500">engineer@gmail.com / password123</div>
+                  </button>
+                </div>
+                <p className="text-xs text-slate-500 mt-3">Click to auto-fill credentials</p>
               </div>
             </CardFooter>
           </form>

@@ -449,9 +449,7 @@ const Projects: React.FC = () => {
                 {/* Only managers can manage projects and assignments */}
                 {user?.role === 'manager' && (
                   <>
-                    <Button variant="outline" size="sm" className="text-xs h-7">
-                      Assign
-                    </Button>
+                    
                     <Button 
                       variant="outline" 
                       size="sm"

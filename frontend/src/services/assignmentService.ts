@@ -24,6 +24,11 @@ export const assignmentService = {
     return response.data;
   },
 
+  async getCurrentAssignments(): Promise<ApiResponse<{assignments: Assignment[]}>> {
+    const response = await api.get('/assignments/current');
+    return response.data;
+  },
+
   async getManagedAssignments(): Promise<ApiResponse<Assignment[]>> {
     const response = await api.get('/assignments/managed');
     return response.data;
