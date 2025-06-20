@@ -23,7 +23,7 @@ const PORT = process.env.PORT || 3300;
 // Security middleware
 app.use(helmet());
 app.use(cors({
-  origin: '*',
+  origin: ["http://localhost:5173", "https://erms-app-ruddy.vercel.app"],
   credentials: true
 }));
 
