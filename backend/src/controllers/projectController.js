@@ -1,4 +1,4 @@
-import { Project, Assignment, Engineer } from '../models/index.js';
+import { Project, Assignment, User } from '../models/index.js';
 import { validateProject, validateProjectUpdate, validateQueryParams } from '../utils/validation.js';
 
 export const getAllProjects = async (req, res) => {
@@ -119,7 +119,7 @@ export const createProject = async (req, res) => {
 
     // Temporarily skip manager validation for debugging
     if (req.body.managerId) {
-      const manager = await Engineer.findById(req.body.managerId);
+      const manager = await User.findById(req.body.managerId);
       if (!manager) {
         console.log('Manager not found:', req.body.managerId);
         return res.status(400).json({ error: 'Manager not found' });

@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import { Engineer } from '../models/index.js';
+import { User } from '../models/index.js';
 import { generateTokens, verifyRefreshToken } from '../middleware/auth.js';
 import { validateLogin, validateRegister } from '../utils/validation.js';
 
@@ -13,8 +13,8 @@ export const register = async (req, res) => {
     const { name, email, password, department, seniority, maxCapacity, skills, role } = req.body;
 
     // Check if user already exists
-    const existingEngineer = await Engineer.findOne({ email: email.toLowerCase() });
-    if (existingEngineer) {
+    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    if (existingUser) {
       return res.status(400).json({ error: 'Email already registered' });
     }
 
@@ -22,28 +22,28 @@ export const register = async (req, res) => {
     const salt = await bcrypt.genSalt(12);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Create new engineer
-    const engineer = new Engineer({
+    // Create new user
+    const user = new User({
       name,
       email: email.toLowerCase(),
       password: hashedPassword,
-      department,
-      seniority: seniority || 'junior',
-      maxCapacity: maxCapacity || 100,
-      skills: skills || [],
-      role: role || 'engineer'
+      role: role || 'engineer',
+      department: role === 'engineer' ? department : undefined,
+      seniority: role === 'engineer' ? (seniority || 'junior') : undefined,
+      maxCapacity: role === 'engineer' ? (maxCapacity || 100) : undefined,
+      skills: role === 'engineer' ? (skills || []) : undefined
     });
 
-    await engineer.save();
+    await user.save();
 
     // Generate tokens
-    const { accessToken, refreshToken } = generateTokens(engineer);
+    const { accessToken, refreshToken } = generateTokens(user);
 
     res.status(201).json({
       success: true,
-      message: 'Engineer registered successfully',
+      message: 'User registered successfully',
       data: {
-        engineer: engineer.toJSON(),
+        engineer: user.toJSON(),
         accessToken,
         refreshToken
       }
@@ -62,30 +62,29 @@ export const login = async (req, res) => {
 
     const { email, password } = req.body;
 
-    // Find engineer
-    const engineer = await Engineer.findOne({ 
-      email: email.toLowerCase(),
-      isActive: true 
+    // Find user
+    const user = await User.findOne({ 
+      email: email.toLowerCase()
     });
 
-    if (!engineer) {
+    if (!user) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     // Check password
-    const isValidPassword = await bcrypt.compare(password, engineer.password);
+    const isValidPassword = await bcrypt.compare(password, user.password);
     if (!isValidPassword) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     // Generate tokens
-    const { accessToken, refreshToken } = generateTokens(engineer);
+    const { accessToken, refreshToken } = generateTokens(user);
 
     res.json({
       success: true,
       message: 'Login successful',
       data: {
-        engineer: engineer.toJSON(),
+        engineer: user.toJSON(),
         accessToken,
         refreshToken
       }
@@ -104,14 +103,14 @@ export const refreshToken = async (req, res) => {
     }
 
     const decoded = verifyRefreshToken(refreshToken);
-    const engineer = await Engineer.findById(decoded.id).select('-password');
+    const user = await User.findById(decoded.id).select('-password');
 
-    if (!engineer || !engineer.isActive) {
+    if (!user) {
       return res.status(401).json({ error: 'Invalid refresh token' });
     }
 
     // Generate new tokens
-    const tokens = generateTokens(engineer);
+    const tokens = generateTokens(user);
 
     res.json({
       success: true,
@@ -153,7 +152,7 @@ export const updateProfile = async (req, res) => {
       }
     });
 
-    const engineer = await Engineer.findByIdAndUpdate(
+    const user = await User.findByIdAndUpdate(
       req.user._id,
       updates,
       { new: true, runValidators: true }
@@ -163,7 +162,7 @@ export const updateProfile = async (req, res) => {
       success: true,
       message: 'Profile updated successfully',
       data: {
-        engineer
+        engineer: user
       }
     });
   } catch (error) {
@@ -183,11 +182,11 @@ export const changePassword = async (req, res) => {
       return res.status(400).json({ error: 'New password must be at least 6 characters' });
     }
 
-    // Get engineer with password
-    const engineer = await Engineer.findById(req.user._id);
+    // Get user with password
+    const user = await User.findById(req.user._id);
 
     // Verify current password
-    const isValidPassword = await bcrypt.compare(currentPassword, engineer.password);
+    const isValidPassword = await bcrypt.compare(currentPassword, user.password);
     if (!isValidPassword) {
       return res.status(401).json({ error: 'Current password is incorrect' });
     }
@@ -197,8 +196,8 @@ export const changePassword = async (req, res) => {
     const hashedPassword = await bcrypt.hash(newPassword, salt);
 
     // Update password
-    engineer.password = hashedPassword;
-    await engineer.save();
+    user.password = hashedPassword;
+    await user.save();
 
     res.json({
       success: true,
