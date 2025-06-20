@@ -84,8 +84,8 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
       setFormData({
         name: project.name || '',
         description: project.description || '',
-        startDate: formatDateForInput(project.startDate),
-        endDate: formatDateForInput(project.endDate),
+        startDate: project.startDate ? formatDateForInput(project.startDate.toString()) : '',
+        endDate: project.endDate ? formatDateForInput(project.endDate.toString()) : '',
         requiredSkills: project.requiredSkills || [],
         teamSize: project.teamSize || 1,
         budget: project.budget || 0,

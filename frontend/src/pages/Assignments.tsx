@@ -29,6 +29,7 @@ interface PopulatedAssignment extends Omit<Assignment, 'engineerId' | 'projectId
     email: string;
     seniority: string;
     department: string;
+    role: string;
   };
   projectId: {
     _id: string;

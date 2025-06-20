@@ -9,7 +9,7 @@ import { projectService } from '@/services/projectService';
 import { assignmentService, type CreateAssignmentData } from '@/services/assignmentService';
 import { useToast } from '@/components/ui/toast';
 
-import type { Assignment, EngineerWithAssignments, Project } from '@/types';
+import type { Assignment, EngineerWithAssignments, Project, User } from '@/types';
 
 interface AssignmentFormProps {
   isOpen: boolean;
@@ -39,8 +39,8 @@ const AssignmentForm: React.FC<AssignmentFormProps> = ({
   const { showToast } = useToast();
   
   const [formData, setFormData] = useState<FormData>({
-    engineerId: (typeof assignment?.engineerId === 'string' ? assignment.engineerId : assignment?.engineerId?._id) || preSelectedEngineerId || '',
-    projectId: (typeof assignment?.projectId === 'string' ? assignment.projectId : assignment?.projectId?._id) || '',
+    engineerId: (typeof assignment?.engineerId === 'string' ? assignment.engineerId : (assignment?.engineerId as User)?._id) || preSelectedEngineerId || '',
+    projectId: (typeof assignment?.projectId === 'string' ? assignment.projectId : (assignment?.projectId as Project)?._id) || '',
     allocationPercentage: assignment?.allocationPercentage || 50,
     startDate: assignment?.startDate ? new Date(assignment.startDate).toISOString().split('T')[0] : '',
     endDate: assignment?.endDate ? new Date(assignment.endDate).toISOString().split('T')[0] : '',

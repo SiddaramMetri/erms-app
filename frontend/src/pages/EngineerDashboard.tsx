@@ -21,7 +21,7 @@ const EngineerDashboard: React.FC = () => {
   const { user } = useAuth();
   const { showToast } = useToast();
   const [assignments, setAssignments] = useState<Assignment[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -29,7 +29,7 @@ const EngineerDashboard: React.FC = () => {
       if (!user) return;
       
       try {
-        setLoading(true);
+        setIsLoading(true);
         setError(null);
         
         const response = await assignmentService.getCurrentAssignments();
@@ -48,7 +48,7 @@ const EngineerDashboard: React.FC = () => {
           message: 'Failed to load your assignments'
         });
       } finally {
-        setLoading(false);
+        setIsLoading(false);
       }
     };
 
@@ -68,7 +68,7 @@ const EngineerDashboard: React.FC = () => {
     });
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="space-y-6">
         <div className="animate-pulse">
