@@ -35,7 +35,7 @@ export const engineerService = {
     return response.data;
   },
 
-  async getEngineerCapacity(id: string): Promise<ApiResponse<any>> {
+  async getEngineerCapacity(id: string): Promise<ApiResponse<unknown>> {
     const response = await api.get(`/engineers/${id}/capacity`);
     return response.data;
   },
@@ -69,7 +69,7 @@ export const engineerService = {
     return response.data;
   },
 
-  async getTeamAnalytics(): Promise<ApiResponse<any>> {
+  async getTeamAnalytics(): Promise<ApiResponse<unknown>> {
     const response = await api.get('/engineers/analytics/team');
     return response.data;
   },

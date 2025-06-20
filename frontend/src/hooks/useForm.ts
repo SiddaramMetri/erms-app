@@ -12,7 +12,7 @@ export interface UseFormReturn<T> {
   errors: Record<string, string>;
   isLoading: boolean;
   isValid: boolean;
-  setValue: (field: keyof T, value: any) => void;
+  setValue: (field: keyof T, value: unknown) => void;
   setValues: (values: Partial<T>) => void;
   setError: (field: string, error: string) => void;
   clearErrors: () => void;
@@ -21,7 +21,7 @@ export interface UseFormReturn<T> {
   validate: () => boolean;
 }
 
-export const useForm = <T extends Record<string, any>>({
+export const useForm = <T extends Record<string, unknown>>({
   initialValues,
   validationRules,
   onSubmit,
@@ -30,7 +30,7 @@ export const useForm = <T extends Record<string, any>>({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
 
-  const setValue = useCallback((field: keyof T, value: any) => {
+  const setValue = useCallback((field: keyof T, value: unknown) => {
     setValuesState(prev => ({ ...prev, [field]: value }));
     
     // Clear error for this field when user starts typing
@@ -73,8 +73,8 @@ export const useForm = <T extends Record<string, any>>({
     setIsLoading(true);
     try {
       await onSubmit(values);
-    } catch (error: any) {
-      setError('submit', error.message || 'An error occurred');
+    } catch (error: unknown) {
+      setError('submit', error instanceof Error ? error.message : 'An error occurred');
     } finally {
       setIsLoading(false);
     }
