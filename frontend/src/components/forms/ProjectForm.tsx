@@ -68,9 +68,9 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
   const isEditing = !!project;
 
   // Helper function to convert date to YYYY-MM-DD format without timezone issues
-  const formatDateForInput = (dateString: string) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
+  const formatDateForInput = (dateValue: string | Date) => {
+    if (!dateValue) return '';
+    const date = typeof dateValue === 'string' ? new Date(dateValue) : dateValue;
     // Use getFullYear, getMonth, getDate to avoid timezone issues
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');

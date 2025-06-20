@@ -9,6 +9,7 @@ import EngineerDashboard from '@/pages/EngineerDashboard';
 import Engineers from '@/pages/Engineers';
 import Projects from '@/pages/Projects';
 import Assignments from '@/pages/Assignments';
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth();
@@ -36,29 +37,31 @@ const DashboardRouter: React.FC = () => {
 
 function App() {
   return (
-    <ToastProvider>
-      <AuthProvider>
-        <Router>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/" element={<Navigate to="/dashboard" />} />
-            <Route
-              path="/*"
-              element={
-                <ProtectedRoute>
-                  <Layout />
-                </ProtectedRoute>
-              }
-            >
-              <Route path="dashboard" element={<DashboardRouter />} />
-              <Route path="engineers" element={<Engineers />} />
-              <Route path="projects" element={<Projects />} />
-              <Route path="assignments" element={<Assignments />} />
-            </Route>
-          </Routes>
-        </Router>
-      </AuthProvider>
-    </ToastProvider>
+    <ErrorBoundary>
+      <ToastProvider>
+        <AuthProvider>
+          <Router>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route path="/" element={<Navigate to="/dashboard" />} />
+              <Route
+                path="/*"
+                element={
+                  <ProtectedRoute>
+                    <Layout />
+                  </ProtectedRoute>
+                }
+              >
+                <Route path="dashboard" element={<DashboardRouter />} />
+                <Route path="engineers" element={<Engineers />} />
+                <Route path="projects" element={<Projects />} />
+                <Route path="assignments" element={<Assignments />} />
+              </Route>
+            </Routes>
+          </Router>
+        </AuthProvider>
+      </ToastProvider>
+    </ErrorBoundary>
   );
 }
 

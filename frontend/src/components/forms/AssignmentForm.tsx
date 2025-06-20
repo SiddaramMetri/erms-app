@@ -39,8 +39,8 @@ const AssignmentForm: React.FC<AssignmentFormProps> = ({
   const { showToast } = useToast();
   
   const [formData, setFormData] = useState<FormData>({
-    engineerId: assignment?.engineerId || preSelectedEngineerId || '',
-    projectId: assignment?.projectId || '',
+    engineerId: (typeof assignment?.engineerId === 'string' ? assignment.engineerId : assignment?.engineerId?._id) || preSelectedEngineerId || '',
+    projectId: (typeof assignment?.projectId === 'string' ? assignment.projectId : assignment?.projectId?._id) || '',
     allocationPercentage: assignment?.allocationPercentage || 50,
     startDate: assignment?.startDate ? new Date(assignment.startDate).toISOString().split('T')[0] : '',
     endDate: assignment?.endDate ? new Date(assignment.endDate).toISOString().split('T')[0] : '',

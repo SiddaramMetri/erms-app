@@ -26,6 +26,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/components/ui/toast';
 import Modal from '@/components/ui/modal';
 import { Label } from '@/components/ui/label';
+import { useDebounce } from '@/hooks/useDebounce';
 
 
 const Engineers: React.FC = () => {
@@ -43,6 +44,9 @@ const Engineers: React.FC = () => {
   const [selectedAssignment, setSelectedAssignment] = useState<any>(null);
   const [newProgress, setNewProgress] = useState(0);
   const { showToast } = useToast();
+  
+  // Debounce search term for better performance
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
   useEffect(() => {
     fetchEngineers();
@@ -66,9 +70,9 @@ const Engineers: React.FC = () => {
   };
 
   const filteredEngineers = engineers.filter(engineer => {
-    const matchesSearch = engineer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         engineer.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (engineer.department || '').toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = engineer.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+                         engineer.email.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+                         (engineer.department || '').toLowerCase().includes(debouncedSearchTerm.toLowerCase());
     
     const matchesSkill = skillFilter === '' || 
                         (engineer.skills || []).some(skill => 

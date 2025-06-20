@@ -23,6 +23,7 @@ import { useToast } from '@/components/ui/toast';
 import Modal from '@/components/ui/modal';
 import { Label } from '@/components/ui/label';
 import type { ProjectWithAssignments } from '@/types';
+import { useDebounce } from '@/hooks/useDebounce';
 
 const Projects: React.FC = () => {
   const { user } = useAuth();
@@ -40,6 +41,9 @@ const Projects: React.FC = () => {
   const [isViewDetailsOpen, setIsViewDetailsOpen] = useState(false);
   const [viewDetailsProject, setViewDetailsProject] = useState<ProjectWithAssignments | null>(null);
   const { showToast } = useToast();
+  
+  // Debounce search term for better performance
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
   // Fetch projects based on user role
   useEffect(() => {
@@ -84,11 +88,11 @@ const Projects: React.FC = () => {
   };
 
   const filteredProjects = projects.filter(project => {
-    const matchesSearch = (project.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (project.description || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch = (project.name || '').toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+                         (project.description || '').toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
                          (project.requiredSkills || []).some(skill => {
                            const skillText = typeof skill === 'string' ? skill : skill.skill || '';
-                           return skillText.toLowerCase().includes(searchTerm.toLowerCase());
+                           return skillText.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
                          });
     
     const matchesStatus = statusFilter === '' || project.status === statusFilter;

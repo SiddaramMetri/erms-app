@@ -5,12 +5,10 @@ import {
   Users2, 
   Plus, 
   Search, 
-  Filter, 
   Calendar,
   Clock,
   User,
   FolderOpen,
-  MoreHorizontal,
   Edit2,
   Trash2,
   CheckCircle,
@@ -18,14 +16,13 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { assignmentService } from '@/services/assignmentService';
-import { engineerService } from '@/services/engineerService';
-import { projectService } from '@/services/projectService';
 import { useToast } from '@/components/ui/toast';
 import { useAuth } from '@/context/AuthContext';
 import AssignmentForm from '@/components/forms/AssignmentForm';
-import type { Assignment, EngineerWithAssignments, Project } from '@/types';
+import type { Assignment } from '@/types';
+import { useDebounce } from '@/hooks/useDebounce';
 
-interface PopulatedAssignment extends Assignment {
+interface PopulatedAssignment extends Omit<Assignment, 'engineerId' | 'projectId'> {
   engineerId: {
     _id: string;
     name: string;
@@ -46,14 +43,15 @@ const Assignments: React.FC = () => {
   const { showToast } = useToast();
   
   const [assignments, setAssignments] = useState<PopulatedAssignment[]>([]);
-  const [engineers, setEngineers] = useState<EngineerWithAssignments[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterRole, setFilterRole] = useState<string>('all');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingAssignment, setEditingAssignment] = useState<Assignment | null>(null);
+  
+  // Debounce search term for better performance
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
   const loadAssignments = useCallback(async () => {
     try {
@@ -61,7 +59,7 @@ const Assignments: React.FC = () => {
       const response = await assignmentService.getAllAssignments();
       
       if (response.success && response.data) {
-        setAssignments(response.data.assignments || []);
+        setAssignments(response.data.assignments as PopulatedAssignment[] || []);
       } else {
         showToast({
           type: 'error',
@@ -82,19 +80,9 @@ const Assignments: React.FC = () => {
   }, [showToast]);
 
   const loadSupportingData = useCallback(async () => {
+    // Supporting data is loaded on-demand by the assignment form
     try {
-      const [engineersResponse, projectsResponse] = await Promise.all([
-        engineerService.getAllEngineers(),
-        projectService.getAllProjects()
-      ]);
-
-      if (engineersResponse.success && engineersResponse.data) {
-        setEngineers(engineersResponse.data.engineers || []);
-      }
-      
-      if (projectsResponse.success && projectsResponse.data) {
-        setProjects(projectsResponse.data.projects || []);
-      }
+      // Future: Could cache engineers and projects here if needed
     } catch (error) {
       console.error('Error loading supporting data:', error);
     }
@@ -207,9 +195,9 @@ const Assignments: React.FC = () => {
 
   const filteredAssignments = assignments.filter((assignment) => {
     const matchesSearch = 
-      assignment.engineerId?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      assignment.projectId?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      assignment.role.toLowerCase().includes(searchTerm.toLowerCase());
+      assignment.engineerId?.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+      assignment.projectId?.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+      assignment.role.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
     
     const matchesStatus = filterStatus === 'all' || assignment.status === filterStatus;
     const matchesRole = filterRole === 'all' || assignment.role === filterRole;
