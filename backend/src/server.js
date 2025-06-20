@@ -17,7 +17,7 @@ import errorHandler from './middleware/errorHandler.js';
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3200;
+const PORT = process.env.PORT || 3300;
 
 // Security middleware
 app.use(helmet());

@@ -87,8 +87,11 @@ export const getAssignmentById = async (req, res) => {
 
 export const createAssignment = async (req, res) => {
   try {
+    console.log('Creating assignment with data:', req.body);
+    
     const { error } = validateAssignment(req.body);
     if (error) {
+      console.log('Validation error:', error.details[0].message);
       return res.status(400).json({ error: error.details[0].message });
     }
 
@@ -96,11 +99,13 @@ export const createAssignment = async (req, res) => {
 
     const engineer = await Engineer.findOne({ _id: engineerId, isActive: true });
     if (!engineer) {
+      console.log('Engineer not found:', engineerId);
       return res.status(404).json({ error: 'Engineer not found' });
     }
 
     const project = await Project.findOne({ _id: projectId, isActive: true });
     if (!project) {
+      console.log('Project not found:', projectId);
       return res.status(404).json({ error: 'Project not found' });
     }
 
@@ -116,7 +121,11 @@ export const createAssignment = async (req, res) => {
       data: { assignment }
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Assignment creation error:', error);
+    res.status(500).json({ 
+      error: error.message,
+      details: error.name === 'ValidationError' ? error.errors : undefined
+    });
   }
 };
 

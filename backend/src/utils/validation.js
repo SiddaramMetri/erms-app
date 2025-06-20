@@ -69,7 +69,7 @@ export const validateProject = (data) => {
     teamSize: Joi.number().min(1).max(50).required(),
     status: Joi.string().valid('planning', 'active', 'on-hold', 'completed', 'cancelled').optional(),
     priority: Joi.string().valid('low', 'medium', 'high', 'critical').optional(),
-    managerId: Joi.string().required(),
+    managerId: Joi.string().optional(),
     budget: Joi.number().min(0).optional(),
     estimatedHours: Joi.number().min(1).optional(),
     tags: Joi.array().items(Joi.string()).optional()

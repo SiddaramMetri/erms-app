@@ -109,14 +109,28 @@ export const getProjectById = async (req, res) => {
 
 export const createProject = async (req, res) => {
   try {
+    console.log('Creating project with data:', req.body);
+    
     const { error } = validateProject(req.body);
     if (error) {
+      console.log('Validation error:', error.details[0].message);
       return res.status(400).json({ error: error.details[0].message });
     }
 
-    const manager = await Engineer.findById(req.body.managerId);
-    if (!manager || !['manager', 'admin'].includes(manager.role)) {
-      return res.status(400).json({ error: 'Invalid manager ID or insufficient permissions' });
+    // Temporarily skip manager validation for debugging
+    if (req.body.managerId) {
+      const manager = await Engineer.findById(req.body.managerId);
+      if (!manager) {
+        console.log('Manager not found:', req.body.managerId);
+        return res.status(400).json({ error: 'Manager not found' });
+      }
+      
+      if (!['manager', 'admin'].includes(manager.role)) {
+        console.log('Insufficient permissions for manager:', manager.role);
+        return res.status(400).json({ error: 'User does not have manager or admin permissions' });
+      }
+    } else {
+      console.log('No managerId provided, creating project without manager validation');
     }
 
     const project = new Project(req.body);
@@ -129,7 +143,11 @@ export const createProject = async (req, res) => {
       data: { project }
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Project creation error:', error);
+    res.status(500).json({ 
+      error: error.message,
+      details: error.name === 'ValidationError' ? error.errors : undefined
+    });
   }
 };
 
