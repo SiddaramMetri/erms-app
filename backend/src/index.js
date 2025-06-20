@@ -66,10 +66,23 @@ app.use('*', (_, res) => {
 // Global error handler
 app.use(errorHandler);
 
+// For local development
+if (process.env.NODE_ENV !== 'production') {
+  configDb().then(() => {
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+      console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    });
+  }).catch(err => {
+    console.error('Failed to start server:', err);
+    process.exit(1);
+  });
+}
+
 // Serverless function handler for Vercel
 export default async function handler(req, res) {
   try {
-    await configDb();
+    await configDb()
     return app(req, res);
   } catch (error) {
     console.error('Handler error:', error);
