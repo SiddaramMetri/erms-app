@@ -8,12 +8,13 @@ export interface CreateAssignmentData {
   allocationPercentage: number;
   startDate: string;
   endDate: string;
-  role: 'Developer' | 'Senior Developer' | 'Tech Lead' | 'Architect' | 'QA Engineer' | 'DevOps Engineer' | 'Product Manager' | 'Designer';
-  status?: 'planned' | 'active' | 'completed' | 'cancelled';
+  role: 'developer' | 'lead' | 'architect' | 'tester' | 'devops' | 'analyst' | 'designer';
+  status?: 'active' | 'completed' | 'cancelled';
+  notes?: string;
 }
 
 export const assignmentService = {
-  async getAllAssignments(): Promise<ApiResponse<Assignment[]>> {
+  async getAllAssignments(): Promise<ApiResponse<{assignments: Assignment[], pagination?: any}>> {
     const response = await api.get('/assignments');
     return response.data;
   },

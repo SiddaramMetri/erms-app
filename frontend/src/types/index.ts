@@ -1,12 +1,26 @@
+export interface Skill {
+  skill: string;
+  level: 'beginner' | 'intermediate' | 'advanced' | 'expert';
+}
+
 export interface User {
   _id: string;
   email: string;
   name: string;
   role: 'engineer' | 'manager';
-  skills?: string[];
+  skills?: Skill[];
   seniority?: 'junior' | 'mid' | 'senior';
   maxCapacity?: number;
   department?: string;
+  isActive?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface RequiredSkill {
+  skill: string;
+  level: 'beginner' | 'intermediate' | 'advanced' | 'expert';
+  priority: 'must-have' | 'nice-to-have';
 }
 
 export interface Project {
@@ -15,10 +29,18 @@ export interface Project {
   description: string;
   startDate: Date;
   endDate: Date;
-  requiredSkills: string[];
+  requiredSkills: RequiredSkill[];
   teamSize: number;
-  status: 'planning' | 'active' | 'completed';
+  status: 'planning' | 'active' | 'on-hold' | 'completed' | 'cancelled';
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  budget?: number;
+  actualStartDate?: Date;
+  actualEndDate?: Date;
+  completionPercentage?: number;
   managerId: string;
+  tags?: string[];
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Assignment {
@@ -28,7 +50,12 @@ export interface Assignment {
   allocationPercentage: number;
   startDate: Date;
   endDate: Date;
-  role: string;
+  role: 'developer' | 'lead' | 'architect' | 'tester' | 'devops' | 'analyst' | 'designer';
+  status: 'active' | 'completed' | 'cancelled';
+  notes?: string;
+  createdBy: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface EngineerWithAssignments extends User {

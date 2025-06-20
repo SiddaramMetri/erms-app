@@ -1,4 +1,4 @@
-import type { EngineerWithAssignments, Assignment } from '@/types';
+import type { EngineerWithAssignments, Assignment, Skill } from '@/types';
 
 export interface CapacityInfo {
   engineerId: string;
@@ -58,7 +58,7 @@ export const findSuitableEngineers = (
   return engineers.filter(engineer => {
     const hasRequiredSkills = requiredSkills.some(skill => 
       engineer.skills?.some(engineerSkill => 
-        engineerSkill.toLowerCase().includes(skill.toLowerCase())
+        engineerSkill.skill.toLowerCase().includes(skill.toLowerCase())
       )
     );
     
@@ -69,15 +69,15 @@ export const findSuitableEngineers = (
 };
 
 export const getSkillMatch = (
-  engineerSkills: string[], 
+  engineerSkills: Skill[], 
   requiredSkills: string[]
 ): number => {
   if (!engineerSkills || !requiredSkills || requiredSkills.length === 0) return 0;
   
   const matchingSkills = requiredSkills.filter(reqSkill =>
     engineerSkills.some(engSkill => 
-      engSkill.toLowerCase().includes(reqSkill.toLowerCase()) ||
-      reqSkill.toLowerCase().includes(engSkill.toLowerCase())
+      engSkill.skill.toLowerCase().includes(reqSkill.toLowerCase()) ||
+      reqSkill.toLowerCase().includes(engSkill.skill.toLowerCase())
     )
   );
   

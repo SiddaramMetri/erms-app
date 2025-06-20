@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -7,6 +7,7 @@ import { Loader2, Calendar, Target } from 'lucide-react';
 import { engineerService } from '@/services/engineerService';
 import { projectService } from '@/services/projectService';
 import { assignmentService, type CreateAssignmentData } from '@/services/assignmentService';
+import { useToast } from '@/components/ui/toast';
 
 import type { Assignment, EngineerWithAssignments, Project } from '@/types';
 
@@ -23,7 +24,8 @@ interface FormData {
   allocationPercentage: number;
   startDate: string;
   endDate: string;
-  role: 'Developer' | 'Senior Developer' | 'Tech Lead' | 'Architect' | 'QA Engineer' | 'DevOps Engineer' | 'Product Manager' | 'Designer' | '';
+  role: 'developer' | 'lead' | 'architect' | 'tester' | 'devops' | 'analyst' | 'designer' | '';
+  notes?: string;
 }
 
 const AssignmentForm: React.FC<AssignmentFormProps> = ({
@@ -32,13 +34,16 @@ const AssignmentForm: React.FC<AssignmentFormProps> = ({
   onSuccess,
   assignment
 }) => {
+  const { showToast } = useToast();
+  
   const [formData, setFormData] = useState<FormData>({
     engineerId: assignment?.engineerId || '',
     projectId: assignment?.projectId || '',
     allocationPercentage: assignment?.allocationPercentage || 50,
     startDate: assignment?.startDate ? new Date(assignment.startDate).toISOString().split('T')[0] : '',
     endDate: assignment?.endDate ? new Date(assignment.endDate).toISOString().split('T')[0] : '',
-    role: (assignment?.role as FormData['role']) || ''
+    role: (assignment?.role as FormData['role']) || '',
+    notes: assignment?.notes || ''
   });
 
   const [engineers, setEngineers] = useState<EngineerWithAssignments[]>([]);
@@ -49,13 +54,7 @@ const AssignmentForm: React.FC<AssignmentFormProps> = ({
 
   const isEditing = !!assignment;
 
-  useEffect(() => {
-    if (isOpen) {
-      loadData();
-    }
-  }, [isOpen]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setIsLoadingData(true);
       const [engineersResponse, projectsResponse] = await Promise.all([
@@ -65,16 +64,42 @@ const AssignmentForm: React.FC<AssignmentFormProps> = ({
 
       if (engineersResponse.success && engineersResponse.data) {
         setEngineers(engineersResponse.data.engineers || []);
+      } else {
+        console.error('Failed to load engineers:', engineersResponse);
+        showToast({
+          type: 'error',
+          title: 'Error',
+          message: 'Failed to load engineers. Please try again.'
+        });
       }
+      
       if (projectsResponse.success && projectsResponse.data) {
         setProjects(projectsResponse.data.projects || []);
+      } else {
+        console.error('Failed to load projects:', projectsResponse);
+        showToast({
+          type: 'error',
+          title: 'Error',
+          message: 'Failed to load projects. Please try again.'
+        });
       }
     } catch (error) {
       console.error('Error loading data:', error);
+      showToast({
+        type: 'error',
+        title: 'Error',
+        message: 'Failed to load form data. Please try again.'
+      });
     } finally {
       setIsLoadingData(false);
     }
-  };
+  }, [showToast]);
+
+  useEffect(() => {
+    if (isOpen) {
+      loadData();
+    }
+  }, [isOpen, loadData]);
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -141,7 +166,8 @@ const AssignmentForm: React.FC<AssignmentFormProps> = ({
           allocationPercentage: formData.allocationPercentage,
           startDate: formData.startDate,
           endDate: formData.endDate,
-          role: formData.role as Exclude<FormData['role'], ''>
+          role: formData.role as Exclude<FormData['role'], ''>,
+          notes: formData.notes
         };
         response = await assignmentService.updateAssignment(assignment!._id, updateData);
       } else {
@@ -152,13 +178,21 @@ const AssignmentForm: React.FC<AssignmentFormProps> = ({
           startDate: formData.startDate,
           endDate: formData.endDate,
           role: formData.role as CreateAssignmentData['role'],
-          status: 'planned' as const
+          status: 'active' as const,
+          notes: formData.notes
         };
-        console.log('Submitting assignment data:', submitData);
         response = await assignmentService.createAssignment(submitData);
       }
 
       if (response.success) {
+        const selectedEngineer = engineers.find(e => e._id === formData.engineerId);
+        const selectedProject = projects.find(p => p._id === formData.projectId);
+        
+        showToast({
+          type: 'success',
+          title: isEditing ? 'Assignment Updated' : 'Assignment Created',
+          message: `${selectedEngineer?.name || 'Engineer'} ${isEditing ? 'updated on' : 'assigned to'} ${selectedProject?.name || 'project'} successfully.`
+        });
         onSuccess();
         onClose();
         resetForm();
@@ -166,7 +200,13 @@ const AssignmentForm: React.FC<AssignmentFormProps> = ({
         setErrors({ submit: response.message || 'Something went wrong' });
       }
     } catch (error: unknown) {
-      setErrors({ submit: (error as Error).message || 'Failed to save assignment' });
+      const errorMessage = (error as Error).message || 'Failed to save assignment';
+      setErrors({ submit: errorMessage });
+      showToast({
+        type: 'error',
+        title: 'Error',
+        message: errorMessage
+      });
     } finally {
       setIsLoading(false);
     }
@@ -179,7 +219,8 @@ const AssignmentForm: React.FC<AssignmentFormProps> = ({
       allocationPercentage: 50,
       startDate: '',
       endDate: '',
-      role: ''
+      role: '',
+      notes: ''
     });
     setErrors({});
   };
@@ -285,7 +326,7 @@ const AssignmentForm: React.FC<AssignmentFormProps> = ({
             <option value="">Choose a project...</option>
             {projects.filter(p => p.status !== 'completed').map((project) => (
               <option key={project._id} value={project._id}>
-                {project.name} - {(project as any).priority || 'medium'} priority
+                {project.name} - {project.priority || 'medium'} priority
               </option>
             ))}
           </select>
@@ -302,14 +343,13 @@ const AssignmentForm: React.FC<AssignmentFormProps> = ({
             className={`flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring ${errors.role ? 'border-red-500' : ''}`}
           >
             <option value="">Select a role...</option>
-            <option value="Developer">Developer</option>
-            <option value="Senior Developer">Senior Developer</option>
-            <option value="Tech Lead">Tech Lead</option>
-            <option value="Architect">Architect</option>
-            <option value="QA Engineer">QA Engineer</option>
-            <option value="DevOps Engineer">DevOps Engineer</option>
-            <option value="Product Manager">Product Manager</option>
-            <option value="Designer">Designer</option>
+            <option value="developer">Developer</option>
+            <option value="lead">Tech Lead</option>
+            <option value="architect">Architect</option>
+            <option value="tester">QA/Tester</option>
+            <option value="devops">DevOps Engineer</option>
+            <option value="analyst">Business Analyst</option>
+            <option value="designer">Designer</option>
           </select>
           {errors.role && <p className="text-sm text-red-600">{errors.role}</p>}
         </div>
@@ -365,6 +405,19 @@ const AssignmentForm: React.FC<AssignmentFormProps> = ({
             </div>
             {errors.endDate && <p className="text-sm text-red-600">{errors.endDate}</p>}
           </div>
+        </div>
+
+        {/* Notes */}
+        <div className="space-y-2">
+          <Label htmlFor="notes">Notes (Optional)</Label>
+          <textarea
+            id="notes"
+            value={formData.notes || ''}
+            onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+            placeholder="Add any additional notes about this assignment..."
+            rows={3}
+            className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 resize-none"
+          />
         </div>
 
         {/* Form submission error */}

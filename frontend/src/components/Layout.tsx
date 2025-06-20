@@ -6,14 +6,14 @@ import {
   Users, 
   FolderOpen, 
   BarChart3, 
-  Settings, 
   LogOut,
   Menu,
   X,
   ChevronRight,
   Bell,
   Search,
-  Building2
+  Building2,
+  Users2
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -33,7 +33,7 @@ const Layout: React.FC = () => {
     { name: 'Engineers', href: '/engineers', icon: Users, description: 'Team Management' },
     { name: 'Projects', href: '/projects', icon: FolderOpen, description: 'Project Portfolio' },
     ...(user?.role === 'manager' ? [
-      { name: 'Assignments', href: '/assignments', icon: Settings, description: 'Resource Allocation' }
+      { name: 'Assignments', href: '/assignments', icon: Users2, description: 'Resource Allocation' }
     ] : [])
   ];
 

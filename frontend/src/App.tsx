@@ -8,6 +8,7 @@ import ManagerDashboard from '@/pages/ManagerDashboard';
 import EngineerDashboard from '@/pages/EngineerDashboard';
 import Engineers from '@/pages/Engineers';
 import Projects from '@/pages/Projects';
+import Assignments from '@/pages/Assignments';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth();
@@ -52,7 +53,7 @@ function App() {
               <Route path="dashboard" element={<DashboardRouter />} />
               <Route path="engineers" element={<Engineers />} />
               <Route path="projects" element={<Projects />} />
-              <Route path="assignments" element={<div>Assignments Page - Coming Soon</div>} />
+              <Route path="assignments" element={<Assignments />} />
             </Route>
           </Routes>
         </Router>

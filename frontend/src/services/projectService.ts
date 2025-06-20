@@ -1,13 +1,11 @@
 import type { Project, ProjectWithAssignments } from '@/types';
 import api from './api';
-// import { Project, ProjectWithAssignments } from '@/types';
 import type { ApiResponse } from './authService';
-// import { ApiResponse } from './authService';
 
 interface SkillRequirement {
   skill: string;
   level: 'beginner' | 'intermediate' | 'advanced' | 'expert';
-  count: number;
+  priority: 'must-have' | 'nice-to-have';
 }
 
 export interface CreateProjectData {
@@ -17,10 +15,11 @@ export interface CreateProjectData {
   endDate: string;
   requiredSkills?: SkillRequirement[];
   teamSize: number;
-  status?: 'planning' | 'active' | 'completed';
+  status?: 'planning' | 'active' | 'on-hold' | 'completed' | 'cancelled';
   budget?: number;
   priority?: 'low' | 'medium' | 'high' | 'critical';
   managerId?: string;
+  tags?: string[];
 }
 
 export const projectService = {
@@ -66,7 +65,7 @@ export const projectService = {
     return response.data;
   },
 
-  async getProjectAnalytics(): Promise<ApiResponse<any>> {
+  async getProjectAnalytics(): Promise<ApiResponse<unknown>> {
     const response = await api.get('/projects/analytics');
     return response.data;
   },

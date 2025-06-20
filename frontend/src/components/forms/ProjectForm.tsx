@@ -7,18 +7,20 @@ import Modal from '@/components/ui/modal';
 import { X, Plus, Loader2, Calendar } from 'lucide-react';
 import { projectService, type CreateProjectData } from '@/services/projectService';
 import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/components/ui/toast';
+import type { Project } from '@/types';
 
 interface ProjectFormProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
-  project?: any; // For editing existing project
+  project?: Project; // For editing existing project
 }
 
 interface SkillRequirement {
   skill: string;
   level: 'beginner' | 'intermediate' | 'advanced' | 'expert';
-  count: number;
+  priority: 'must-have' | 'nice-to-have';
 }
 
 interface FormData {
@@ -30,7 +32,8 @@ interface FormData {
   teamSize: number;
   budget: number;
   priority: 'low' | 'medium' | 'high' | 'critical';
-  status: 'planning' | 'active' | 'completed';
+  status: 'planning' | 'active' | 'on-hold' | 'completed' | 'cancelled';
+  tags: string[];
 }
 
 const ProjectForm: React.FC<ProjectFormProps> = ({
@@ -40,6 +43,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
   project
 }) => {
   const { user } = useAuth();
+  const { showToast } = useToast();
   
   const [formData, setFormData] = useState<FormData>({
     name: project?.name || '',
@@ -50,12 +54,14 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
     teamSize: project?.teamSize || 1,
     budget: project?.budget || 0,
     priority: project?.priority || 'medium',
-    status: project?.status || 'planning'
+    status: project?.status || 'planning',
+    tags: project?.tags || []
   });
 
   const [newSkill, setNewSkill] = useState('');
   const [skillLevel, setSkillLevel] = useState<SkillRequirement['level']>('intermediate');
-  const [skillCount, setSkillCount] = useState(1);
+  const [skillPriority, setSkillPriority] = useState<SkillRequirement['priority']>('must-have');
+  const [newTag, setNewTag] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
 
@@ -121,7 +127,8 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
           teamSize: formData.teamSize,
           budget: formData.budget,
           priority: formData.priority,
-          status: formData.status
+          status: formData.status,
+          tags: formData.tags
         };
         response = await projectService.updateProject(project._id, updateData);
       } else {
@@ -135,21 +142,33 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
           status: formData.status,
           budget: formData.budget,
           priority: formData.priority,
-          managerId: user?._id || ''
+          managerId: user?._id || '',
+          tags: formData.tags
         };
         console.log('Submitting project data:', submitData);
         response = await projectService.createProject(submitData);
       }
 
       if (response.success) {
+        showToast({
+          type: 'success',
+          title: isEditing ? 'Project Updated' : 'Project Created',
+          message: `${formData.name} has been ${isEditing ? 'updated' : 'created'} successfully.`
+        });
         onSuccess();
         onClose();
         resetForm();
       } else {
-        setErrors({ submit: response.message || 'Something went wrong' });
+        setErrors({ submit: response.error || response.message || 'Something went wrong' });
       }
-    } catch (error: any) {
-      setErrors({ submit: error.message || 'Failed to save project' });
+    } catch (error: unknown) {
+      const errorMessage = (error as Error).message || 'Failed to save project';
+      setErrors({ submit: errorMessage });
+      showToast({
+        type: 'error',
+        title: 'Error',
+        message: errorMessage
+      });
     } finally {
       setIsLoading(false);
     }
@@ -165,7 +184,8 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
       teamSize: 1,
       budget: 0,
       priority: 'medium',
-      status: 'planning'
+      status: 'planning',
+      tags: []
     });
     setNewSkill('');
     setErrors({});
@@ -178,7 +198,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
         const newSkillObj: SkillRequirement = {
           skill: newSkill.trim(),
           level: skillLevel,
-          count: skillCount
+          priority: skillPriority
         };
         setFormData(prev => ({
           ...prev,
@@ -186,7 +206,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
         }));
         setNewSkill('');
         setSkillLevel('intermediate');
-        setSkillCount(1);
+        setSkillPriority('must-have');
       }
     }
   };
@@ -195,6 +215,23 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
     setFormData(prev => ({
       ...prev,
       requiredSkills: prev.requiredSkills.filter(skill => skill.skill !== skillToRemove.skill)
+    }));
+  };
+
+  const addTag = () => {
+    if (newTag.trim() && !formData.tags.includes(newTag.trim())) {
+      setFormData(prev => ({
+        ...prev,
+        tags: [...prev.tags, newTag.trim()]
+      }));
+      setNewTag('');
+    }
+  };
+
+  const removeTag = (tagToRemove: string) => {
+    setFormData(prev => ({
+      ...prev,
+      tags: prev.tags.filter(tag => tag !== tagToRemove)
     }));
   };
 
@@ -345,10 +382,54 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
             >
               <option value="planning">Planning</option>
               <option value="active">Active</option>
+              <option value="on-hold">On Hold</option>
               <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
             </select>
           </div>
         )}
+
+        {/* Tags */}
+        <div className="space-y-3">
+          <Label>Project Tags</Label>
+          
+          {/* Add tag input */}
+          <div className="flex space-x-2">
+            <Input
+              value={newTag}
+              onChange={(e) => setNewTag(e.target.value)}
+              placeholder="Add tag (e.g., frontend, urgent, mobile)"
+              onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
+              className="flex-1"
+            />
+            <Button
+              type="button"
+              onClick={addTag}
+              disabled={!newTag.trim()}
+              className="px-3"
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {/* Tags list */}
+          {formData.tags.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {formData.tags.map((tag, index) => (
+                <div key={index} className="flex items-center space-x-1 bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                  <span className="text-sm">{tag}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeTag(tag)}
+                    className="text-blue-600 hover:text-blue-800"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* Required Skills */}
         <div className="space-y-3">
@@ -373,13 +454,14 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
                 <option value="advanced">Advanced</option>
                 <option value="expert">Expert</option>
               </select>
-              <Input
-                type="number"
-                min="1"
-                value={skillCount}
-                onChange={(e) => setSkillCount(parseInt(e.target.value) || 1)}
-                placeholder="Count"
-              />
+              <select
+                value={skillPriority}
+                onChange={(e) => setSkillPriority(e.target.value as SkillRequirement['priority'])}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              >
+                <option value="must-have">Must Have</option>
+                <option value="nice-to-have">Nice to Have</option>
+              </select>
               <Button
                 type="button"
                 onClick={addSkill}
@@ -399,7 +481,9 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
                   <div className="flex items-center space-x-2">
                     <Badge variant="secondary">{skill.skill}</Badge>
                     <span className="text-sm text-gray-600">{skill.level}</span>
-                    <span className="text-sm text-gray-500">({skill.count} needed)</span>
+                    <Badge variant={skill.priority === 'must-have' ? 'destructive' : 'outline'} className="text-xs">
+                      {skill.priority}
+                    </Badge>
                   </div>
                   <button
                     type="button"
