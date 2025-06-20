@@ -1,5 +1,10 @@
 import { Assignment, User, Project } from '../models/index.js';
 import { validateAssignment, validateAssignmentUpdate, validateQueryParams } from '../utils/validation.js';
+import { 
+  suggestOptimalAssignments, 
+  detectAssignmentConflicts, 
+  generateCapacityForecast 
+} from '../utils/resourceOptimizer.js';
 
 export const getAllAssignments = async (req, res) => {
   try {
@@ -349,6 +354,70 @@ export const getCurrentAssignments = async (req, res) => {
       data: { assignments }
     });
   } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Resource optimization endpoints
+export const getSuggestedAssignments = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    
+    if (!projectId) {
+      return res.status(400).json({ error: 'Project ID is required' });
+    }
+
+    const suggestions = await suggestOptimalAssignments(projectId);
+    
+    res.json({
+      success: true,
+      data: suggestions
+    });
+  } catch (error) {
+    console.error('Error getting assignment suggestions:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const checkAssignmentConflicts = async (req, res) => {
+  try {
+    const { engineerId, startDate, endDate, excludeAssignmentId } = req.query;
+    
+    if (!engineerId || !startDate || !endDate) {
+      return res.status(400).json({ 
+        error: 'Engineer ID, start date, and end date are required' 
+      });
+    }
+
+    const conflicts = await detectAssignmentConflicts(
+      engineerId, 
+      startDate, 
+      endDate, 
+      excludeAssignmentId
+    );
+    
+    res.json({
+      success: true,
+      data: conflicts
+    });
+  } catch (error) {
+    console.error('Error checking assignment conflicts:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const getCapacityForecast = async (req, res) => {
+  try {
+    const { weeks = 12 } = req.query;
+    
+    const forecast = await generateCapacityForecast(parseInt(weeks));
+    
+    res.json({
+      success: true,
+      data: forecast
+    });
+  } catch (error) {
+    console.error('Error generating capacity forecast:', error);
     res.status(500).json({ error: error.message });
   }
 };

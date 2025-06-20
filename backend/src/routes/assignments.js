@@ -8,7 +8,10 @@ import {
   updateAssignmentProgress,
   deleteAssignment,
   getActiveAssignments,
-  getCurrentAssignments
+  getCurrentAssignments,
+  getSuggestedAssignments,
+  checkAssignmentConflicts,
+  getCapacityForecast
 } from '../controllers/assignmentController.js';
 
 const router = express.Router();
@@ -28,5 +31,12 @@ router.put('/:id', authenticateToken, requireManagerOrAdmin, updateAssignment);
 router.patch('/:id/progress', authenticateToken, updateAssignmentProgress);
 
 router.delete('/:id', authenticateToken, requireManagerOrAdmin, deleteAssignment);
+
+// Resource optimization routes
+router.get('/suggestions/:projectId', authenticateToken, requireManagerOrAdmin, getSuggestedAssignments);
+
+router.get('/conflicts/check', authenticateToken, requireManagerOrAdmin, checkAssignmentConflicts);
+
+router.get('/forecast/capacity', authenticateToken, requireManagerOrAdmin, getCapacityForecast);
 
 export default router;
