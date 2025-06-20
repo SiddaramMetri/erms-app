@@ -18,15 +18,11 @@ export const register = async (req, res) => {
       return res.status(400).json({ error: 'Email already registered' });
     }
 
-    // Hash password
-    const salt = await bcrypt.genSalt(12);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
-    // Create new user
+    // Create new user (password will be hashed by pre-save hook)
     const user = new User({
       name,
       email: email.toLowerCase(),
-      password: hashedPassword,
+      password: password,
       role: role || 'engineer',
       department: role === 'engineer' ? department : undefined,
       seniority: role === 'engineer' ? (seniority || 'junior') : undefined,

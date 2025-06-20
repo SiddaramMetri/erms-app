@@ -1,5 +1,7 @@
 import jwt from 'jsonwebtoken';
-import { Engineer } from '../models/index.js';
+import mongoose from 'mongoose';
+import { User } from '../models/index.js';
+import AppError from '../utils/AppError.js';
 
 // Middleware to verify JWT token
 export const authenticateToken = async (req, res, next) => {
@@ -8,26 +10,33 @@ export const authenticateToken = async (req, res, next) => {
     const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 
     if (!token) {
-      return res.status(401).json({ error: 'Access token required' });
+      return next(new AppError('Access token required', 401));
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const engineer = await Engineer.findById(decoded.id).select('-password');
     
-    if (!engineer || !engineer.isActive) {
-      return res.status(401).json({ error: 'Invalid or expired token' });
+    // Ensure proper ObjectId conversion
+    let userId;
+    try {
+      userId = new mongoose.Types.ObjectId(decoded.id);
+    } catch (err) {
+      console.error('Invalid ObjectId in token:', decoded.id);
+      return next(new AppError('Invalid token format', 401));
+    }
+    
+    const user = await User.findOne({ 
+      _id: userId, 
+      isActive: true 
+    }).select('-password');
+    
+    if (!user) {
+      return next(new AppError('User no longer exists or has been deactivated', 401));
     }
 
-    req.user = engineer;
+    req.user = user;
     next();
   } catch (error) {
-    if (error.name === 'JsonWebTokenError') {
-      return res.status(401).json({ error: 'Invalid token' });
-    }
-    if (error.name === 'TokenExpiredError') {
-      return res.status(401).json({ error: 'Token expired' });
-    }
-    return res.status(500).json({ error: 'Token verification failed' });
+    next(error);
   }
 };
 
@@ -35,15 +44,14 @@ export const authenticateToken = async (req, res, next) => {
 export const requireRole = (...roles) => {
   return (req, res, next) => {
     if (!req.user) {
-      return res.status(401).json({ error: 'Authentication required' });
+      return next(new AppError('Authentication required', 401));
     }
 
     if (!roles.includes(req.user.role)) {
-      return res.status(403).json({ 
-        error: 'Insufficient permissions',
-        required: roles,
-        current: req.user.role
-      });
+      return next(new AppError(
+        `Access denied. Required role: ${roles.join(' or ')}. Current role: ${req.user.role}`, 
+        403
+      ));
     }
 
     next();
@@ -86,11 +94,11 @@ export const canAccessEngineer = async (req, res, next) => {
 };
 
 // Generate JWT tokens
-export const generateTokens = (engineer) => {
+export const generateTokens = (user) => {
   const payload = {
-    id: engineer._id,
-    email: engineer.email,
-    role: engineer.role
+    id: user._id,
+    email: user.email,
+    role: user.role
   };
 
   const accessToken = jwt.sign(

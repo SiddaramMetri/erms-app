@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import bcrypt from 'bcryptjs';
 
 const userSchema = new mongoose.Schema({
   email: {
@@ -25,8 +26,16 @@ const userSchema = new mongoose.Schema({
     required: true
   },
   skills: [{
-    type: String,
-    trim: true
+    skill: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    level: {
+      type: String,
+      enum: ['beginner', 'intermediate', 'advanced', 'expert'],
+      default: 'beginner'
+    }
   }],
   seniority: {
     type: String,
@@ -49,6 +58,10 @@ const userSchema = new mongoose.Schema({
       return this.role === 'engineer';
     },
     trim: true
+  },
+  isActive: {
+    type: Boolean,
+    default: true
   }
 }, {
   timestamps: true,
@@ -61,8 +74,44 @@ const userSchema = new mongoose.Schema({
   }
 });
 
+userSchema.pre('save', async function(next) {
+  if (!this.isModified('password')) return next();
+  try {
+    const salt = await bcrypt.genSalt(12);
+    this.password = await bcrypt.hash(this.password, salt);
+    return next();
+  } catch (error) {
+    return next(error);
+  }
+});
+
+userSchema.methods.matchPassword = async function (enteredPassword) {
+  return bcrypt.compare(enteredPassword, this.password);
+};
+
+// Static methods
+userSchema.statics.findBySkill = function(skill, level = 'beginner') {
+  return this.find({
+    role: 'engineer',
+    isActive: true,
+    'skills.skill': { $regex: skill, $options: 'i' },
+    'skills.level': { $in: ['beginner', 'intermediate', 'advanced', 'expert'].slice(['beginner', 'intermediate', 'advanced', 'expert'].indexOf(level)) }
+  }).select('-password');
+};
+
+userSchema.statics.findAvailableEngineers = function() {
+  return this.find({
+    role: 'engineer',
+    isActive: true
+  }).select('-password');
+};
+
 // Indexes for better performance
 userSchema.index({ email: 1 });
 userSchema.index({ role: 1 });
+userSchema.index({ isActive: 1 });
+userSchema.index({ 'skills.skill': 1 });
+userSchema.index({ department: 1 });
+userSchema.index({ seniority: 1 });
 
 export default mongoose.model('User', userSchema);

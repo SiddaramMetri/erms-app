@@ -8,7 +8,7 @@ import 'express-async-errors';
 import dotenv from 'dotenv';
 
 import authRoutes from './routes/auth.js';
-import engineerRoutes from './routes/engineers.js';
+import userRoutes from './routes/users.js';
 import projectRoutes from './routes/projects.js';
 import assignmentRoutes from './routes/assignments.js';
 import analyticsRoutes from './routes/analytics.js';
@@ -47,7 +47,8 @@ app.get('/health', (_, res) => {
 
 // API routes
 app.use('/api/auth', authRoutes);
-app.use('/api/engineers', engineerRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/engineers', userRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/assignments', assignmentRoutes);
 app.use('/api/analytics', analyticsRoutes);
@@ -60,7 +61,6 @@ app.use('*', (_, res) => {
 // Global error handler
 app.use(errorHandler);
 
-// Database connection
 mongoose.connect(process.env.DATABASE_URL || 'mongodb://localhost:27017/erms', {
   useNewUrlParser: true,
   useUnifiedTopology: true,

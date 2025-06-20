@@ -12,13 +12,13 @@ import {
 
 const router = express.Router();
 
-// Authentication routes
-router.post('/register', register);
-router.post('/login', login);
-router.post('/refresh', refreshToken);
-router.get('/profile', authenticateToken, getProfile);
-router.put('/profile', authenticateToken, updateProfile);
-router.put('/change-password', authenticateToken, changePassword);
-router.post('/logout', authenticateToken, logout);
+router.post("/register", register);
+router.post("/login", login);
+router.post("/refresh-token", refreshToken);
+router.get("/profile", authenticateToken, getProfile);
+router.put("/profile", authenticateToken, updateProfile);
+router.put("/change-password", authenticateToken, changePassword);
+router.post("/logout", logout);
+
 
 export default router;
