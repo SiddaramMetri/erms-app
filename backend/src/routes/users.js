@@ -34,8 +34,8 @@ router.get('/:id', authenticateToken, canAccessEngineer, getEngineerById);
 router.get('/:id/capacity', authenticateToken, canAccessEngineer, getEngineerCapacity);
 router.get('/:id/assignments', authenticateToken, canAccessEngineer, getEngineerAssignments);
 
-// Protected routes (manager/admin only)
-router.put('/:id', authenticateToken, requireManagerOrAdmin, updateEngineer);
+// Protected routes
+router.put('/:id', authenticateToken, canAccessEngineer, updateEngineer);
 router.delete('/:id', authenticateToken, requireManagerOrAdmin, deleteEngineer);
 
 export default router;

@@ -187,8 +187,8 @@ export const updateUser = async (req, res) => {
     // For engineers, restrict what fields they can update
     let updateData = req.body;
     if (req.user.role === 'engineer') {
-      // Engineers can only update specific profile fields
-      const allowedFields = ['name', 'skills', 'seniority', 'department'];
+      // Engineers can update their profile fields including capacity
+      const allowedFields = ['name', 'skills', 'seniority', 'department', 'maxCapacity'];
       updateData = {};
       allowedFields.forEach(field => {
         if (req.body[field] !== undefined) {
@@ -196,10 +196,10 @@ export const updateUser = async (req, res) => {
         }
       });
       
-      // Engineers cannot change role, maxCapacity, or isActive
-      if (req.body.role || req.body.maxCapacity !== undefined || req.body.isActive !== undefined) {
+      // Engineers cannot change role or isActive
+      if (req.body.role !== undefined || req.body.isActive !== undefined) {
         return res.status(403).json({ 
-          error: 'Engineers cannot modify role, capacity, or active status.' 
+          error: 'Engineers cannot modify role or active status.' 
         });
       }
     }
