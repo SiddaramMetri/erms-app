@@ -41,17 +41,22 @@ export interface Project {
   tags?: string[];
   createdAt?: string;
   updatedAt?: string;
+  // Additional computed properties from backend
+  currentTeamSize?: number;
+  isOverdue?: boolean;
+  durationDays?: number;
 }
 
 export interface Assignment {
   _id: string;
-  engineerId: string;
-  projectId: string;
+  engineerId: string | User;
+  projectId: string | Project;
   allocationPercentage: number;
   startDate: Date;
   endDate: Date;
   role: 'developer' | 'lead' | 'architect' | 'tester' | 'devops' | 'analyst' | 'designer';
   status: 'active' | 'completed' | 'cancelled';
+  completionPercentage?: number;
   notes?: string;
   createdBy: string;
   createdAt?: string;
@@ -67,8 +72,8 @@ export interface EngineerWithAssignments extends User {
 }
 
 export interface ProjectWithAssignments extends Project {
-  assignments: Assignment[];
-  assignedEngineers: User[];
+  assignments?: Assignment[];
+  assignedEngineers?: User[];
 }
 
 export interface AuthState {

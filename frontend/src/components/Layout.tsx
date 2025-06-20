@@ -28,14 +28,18 @@ const Layout: React.FC = () => {
     navigate('/login');
   };
 
-  const navigation = [
-    { name: 'Dashboard', href: '/dashboard', icon: BarChart3, description: 'Overview & Analytics' },
-    { name: 'Engineers', href: '/engineers', icon: Users, description: 'Team Management' },
-    { name: 'Projects', href: '/projects', icon: FolderOpen, description: 'Project Portfolio' },
-    ...(user?.role === 'manager' ? [
-      { name: 'Assignments', href: '/assignments', icon: Users2, description: 'Resource Allocation' }
-    ] : [])
-  ];
+  const navigation = user?.role === 'manager' 
+    ? [
+        { name: 'Dashboard', href: '/dashboard', icon: BarChart3, description: 'Overview & Analytics' },
+        { name: 'Engineers', href: '/engineers', icon: Users, description: 'Team Management' },
+        { name: 'Projects', href: '/projects', icon: FolderOpen, description: 'Project Portfolio' },
+        { name: 'Assignments', href: '/assignments', icon: Users2, description: 'Resource Allocation' }
+      ]
+    : [
+        { name: 'Dashboard', href: '/dashboard', icon: BarChart3, description: 'My Dashboard' },
+        { name: 'My Profile', href: '/engineers', icon: Users, description: 'Profile & Settings' },
+        { name: 'My Assignments', href: '/assignments', icon: Users2, description: 'My Task Assignments' }
+      ];
 
   const getPageTitle = () => {
     const currentPage = navigation.find(item => item.href === location.pathname);

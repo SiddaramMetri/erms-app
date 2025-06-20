@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,13 +8,13 @@ import { X, Plus, Loader2, Calendar } from 'lucide-react';
 import { projectService, type CreateProjectData } from '@/services/projectService';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/components/ui/toast';
-import type { Project } from '@/types';
+import type { Project, ProjectWithAssignments } from '@/types';
 
 interface ProjectFormProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
-  project?: Project; // For editing existing project
+  project?: Project | ProjectWithAssignments; // For editing existing project
 }
 
 interface SkillRequirement {
@@ -46,16 +46,16 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
   const { showToast } = useToast();
   
   const [formData, setFormData] = useState<FormData>({
-    name: project?.name || '',
-    description: project?.description || '',
-    startDate: project?.startDate ? new Date(project.startDate).toISOString().split('T')[0] : '',
-    endDate: project?.endDate ? new Date(project.endDate).toISOString().split('T')[0] : '',
-    requiredSkills: project?.requiredSkills || [],
-    teamSize: project?.teamSize || 1,
-    budget: project?.budget || 0,
-    priority: project?.priority || 'medium',
-    status: project?.status || 'planning',
-    tags: project?.tags || []
+    name: '',
+    description: '',
+    startDate: '',
+    endDate: '',
+    requiredSkills: [],
+    teamSize: 1,
+    budget: 0,
+    priority: 'medium',
+    status: 'planning',
+    tags: []
   });
 
   const [newSkill, setNewSkill] = useState('');
@@ -66,6 +66,49 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
   const [isLoading, setIsLoading] = useState(false);
 
   const isEditing = !!project;
+
+  // Helper function to convert date to YYYY-MM-DD format without timezone issues
+  const formatDateForInput = (dateString: string) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    // Use getFullYear, getMonth, getDate to avoid timezone issues
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  // Update form data when project prop changes
+  useEffect(() => {
+    if (project) {
+      setFormData({
+        name: project.name || '',
+        description: project.description || '',
+        startDate: formatDateForInput(project.startDate),
+        endDate: formatDateForInput(project.endDate),
+        requiredSkills: project.requiredSkills || [],
+        teamSize: project.teamSize || 1,
+        budget: project.budget || 0,
+        priority: project.priority || 'medium',
+        status: project.status || 'planning',
+        tags: project.tags || []
+      });
+    } else {
+      // Reset form for new project
+      setFormData({
+        name: '',
+        description: '',
+        startDate: '',
+        endDate: '',
+        requiredSkills: [],
+        teamSize: 1,
+        budget: 0,
+        priority: 'medium',
+        status: 'planning',
+        tags: []
+      });
+    }
+  }, [project]);
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -121,23 +164,37 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
         const updateData = {
           name: formData.name,
           description: formData.description,
-          startDate: formData.startDate,
-          endDate: formData.endDate,
-          requiredSkills: formData.requiredSkills,
+          startDate: new Date(formData.startDate + 'T12:00:00.000Z').toISOString(),
+          endDate: new Date(formData.endDate + 'T12:00:00.000Z').toISOString(),
+          requiredSkills: formData.requiredSkills.map(skill => ({
+            skill: skill.skill,
+            level: skill.level,
+            priority: skill.priority
+          })),
           teamSize: formData.teamSize,
           budget: formData.budget,
           priority: formData.priority,
           status: formData.status,
           tags: formData.tags
         };
+        console.log('Update data:', updateData);
+        console.log('Form dates:', { startDate: formData.startDate, endDate: formData.endDate });
+        console.log('Parsed dates:', { 
+          startDate: new Date(formData.startDate + 'T12:00:00.000Z'), 
+          endDate: new Date(formData.endDate + 'T12:00:00.000Z') 
+        });
         response = await projectService.updateProject(project._id, updateData);
       } else {
         const submitData: CreateProjectData = {
           name: formData.name,
           description: formData.description,
-          startDate: formData.startDate,
-          endDate: formData.endDate,
-          requiredSkills: formData.requiredSkills,
+          startDate: new Date(formData.startDate + 'T12:00:00.000Z').toISOString(),
+          endDate: new Date(formData.endDate + 'T12:00:00.000Z').toISOString(),
+          requiredSkills: formData.requiredSkills.map(skill => ({
+            skill: skill.skill,
+            level: skill.level,
+            priority: skill.priority
+          })),
           teamSize: formData.teamSize,
           status: formData.status,
           budget: formData.budget,

@@ -49,6 +49,11 @@ export const assignmentService = {
     return response.data;
   },
 
+  async updateAssignmentProgress(id: string, completionPercentage: number): Promise<ApiResponse<Assignment>> {
+    const response = await api.patch(`/assignments/${id}/progress`, { completionPercentage });
+    return response.data;
+  },
+
   async deleteAssignment(id: string): Promise<ApiResponse> {
     const response = await api.delete(`/assignments/${id}`);
     return response.data;

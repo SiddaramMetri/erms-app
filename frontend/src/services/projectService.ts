@@ -65,6 +65,11 @@ export const projectService = {
     return response.data;
   },
 
+  async updateProjectProgress(id: string, completionPercentage: number): Promise<ApiResponse<Project>> {
+    const response = await api.patch(`/projects/${id}/progress`, { completionPercentage });
+    return response.data;
+  },
+
   async getProjectAnalytics(): Promise<ApiResponse<unknown>> {
     const response = await api.get('/projects/analytics');
     return response.data;

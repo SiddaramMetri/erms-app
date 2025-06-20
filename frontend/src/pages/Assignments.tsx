@@ -124,8 +124,12 @@ const Assignments: React.FC = () => {
     setIsFormOpen(true);
   };
 
-  const handleDeleteAssignment = async (assignmentId: string) => {
-    if (!confirm('Are you sure you want to delete this assignment?')) {
+  const handleDeleteAssignment = async (assignmentId: string, assignmentInfo?: {engineer: string, project: string}) => {
+    const confirmMessage = assignmentInfo 
+      ? `Are you sure you want to delete the assignment of ${assignmentInfo.engineer} to ${assignmentInfo.project}? This action cannot be undone.`
+      : 'Are you sure you want to delete this assignment? This action cannot be undone.';
+      
+    if (!confirm(confirmMessage)) {
       return;
     }
 
@@ -134,18 +138,20 @@ const Assignments: React.FC = () => {
       if (response.success) {
         showToast({
           type: 'success',
-          title: 'Success',
-          message: 'Assignment deleted successfully'
+          title: 'Assignment Deleted',
+          message: response.message || 'Assignment deleted successfully'
         });
         loadAssignments();
       } else {
         throw new Error(response.message || 'Delete failed');
       }
     } catch (error) {
+      console.error('Delete assignment error:', error);
+      const errorMessage = (error as any)?.response?.data?.error || (error as Error).message || 'Failed to delete assignment';
       showToast({
         type: 'error',
-        title: 'Error',
-        message: 'Failed to delete assignment'
+        title: 'Delete Failed',
+        message: errorMessage
       });
     }
   };
@@ -419,8 +425,11 @@ const Assignments: React.FC = () => {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleDeleteAssignment(assignment._id)}
-                            className="flex items-center gap-1 text-red-600 hover:text-red-700"
+                            onClick={() => handleDeleteAssignment(assignment._id, {
+                              engineer: assignment.engineerId?.name || 'Unknown Engineer',
+                              project: assignment.projectId?.name || 'Unknown Project'
+                            })}
+                            className="flex items-center gap-1 text-red-600 hover:text-red-700 hover:bg-red-50"
                           >
                             <Trash2 className="h-3 w-3" />
                             Delete
