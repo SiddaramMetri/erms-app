@@ -5,7 +5,8 @@ import { User, Project, Assignment } from './src/models/index.js';
 dotenv.config();
 
 async function seedData() {
-  try {
+  try { 
+    
     console.log('🌱 Starting database seeding...');
     
     await mongoose.connect(process.env.DATABASE_URL || 'mongodb://localhost:27017/erms');
