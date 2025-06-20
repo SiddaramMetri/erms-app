@@ -2,33 +2,7 @@
 
 A full-stack application for managing engineering team assignments across projects.  
 Built with React (TypeScript) + Shadcn UI + Tailwind (frontend) and Node.js + Express + Mongoose (backend).
-
-## Table of Contents
-
-1. [Project Overview](#project-overview)  
-2. [Core Features](#core-features)  
-3. [Tech Stack](#tech-stack) 
-4. [Getting Started](#getting-started)  
-   - [Prerequisites](#prerequisites)  
-   - [Clone & Install](#clone--install)  
-   - [Environment Variables](#environment-variables)  
-   - [Seeding the Database](#seeding-the-database)  
-   - [Run Backend](#run-backend)  
-   - [Run Frontend](#run-frontend)  
-5. [Usage](#usage)  
-   - [Manager Workflow](#manager-workflow)  
-   - [Engineer Workflow](#engineer-workflow)  
-6. [API Endpoints](#api-endpoints)  
-7. [AI Tools & Workflow](#ai-tools--workflow)  
-   - [Which AI Tools Were Used](#which-ai-tools-were-used)  
-   - [How AI Accelerated Development](#how-ai-accelerated-development)  
-   - [Challenges with AI-Generated Code](#challenges-with-ai-generated-code)  
-   - [Validating AI Suggestions](#validating-ai-suggestions)  
-8. [Deployment](#deployment)  
-9. [Troubleshooting](#troubleshooting)  
-10. [License](#license)  
-
----
+t
 
 ## Project Overview
 
@@ -36,13 +10,17 @@ This application manages which engineers are assigned to which projects, tracks 
 
 - **Manager**  
   - Create/Edit/Delete Projects  
-  - Assign/Update/Delete Engineer Assignments  
-  - See a dashboard of all engineers, their capacities, and availability  
+  - Create/Update/Delete Engineer Assignments  
+  - Manage engineer profiles (CRUD operations)  
+  - View dashboard with all engineers, their capacities, and availability  
   - View analytics (team utilization chart) and search/filter engineers by skill  
+  - Access all system data and functionality  
 
 - **Engineer**  
-  - Log in and view only their own assignments and capacity  
-  - View "My Profile" (edit skills, seniority, etc.)  
+  - **View Only Access**: View their own assignments and capacity status  
+  - **Profile Management**: Update their own profile (skills, seniority, personal info)  
+  - **No Edit Permissions**: Cannot create, edit, or delete projects or assignments  
+  - **Restricted Dashboard**: Personal dashboard showing only their own data  
 
 All data is persisted in MongoDB via Mongoose. Authentication is JWT-based, with "engineer" vs. "manager" roles enforcing access control.
 
@@ -52,32 +30,38 @@ All data is persisted in MongoDB via Mongoose. Authentication is JWT-based, with
 
 1. **Authentication & User Roles**  
    - JWT login (email + password) with two roles: `manager` and `engineer`.  
-   - Engineers see only their own data; managers see everything.
+   - **Managers**: Full access to all system functionality  
+   - **Engineers**: Read-only access to their own data + profile update permissions
 
 2. **Engineer Management**  
-   - CRUD for engineer profiles (name, skills, seniority, capacity, department).  
+   - **Manager**: Full CRUD for engineer profiles (name, skills, seniority, capacity, department)  
+   - **Engineer**: Can only update their own profile information
 
 3. **Project Management**  
-   - CRUD for projects (name, description, dates, required skills, status, team size).  
+   - **Manager**: Full CRUD for projects (name, description, dates, required skills, status, team size)  
+   - **Engineer**: Read-only access to projects they are assigned to
 
 4. **Assignment System**  
-   - Assign engineers to projects with an allocation percentage (0–100).  
-   - Capacity validation on create/update: cannot exceed `maxCapacity`.  
-   - CRUD for assignments.
+   - **Manager**: Create/Update/Delete engineer assignments with allocation percentage (0–100)  
+   - **Engineer**: View-only access to their own assignments  
+   - **Validation**: Capacity validation on create/update - cannot exceed `maxCapacity`
 
 5. **Dashboard Views**  
    - **Manager Dashboard**:  
-     - Team overview with capacity bars  
+     - Team overview with capacity bars for all engineers  
      - Search/filter engineers by skill  
-     - Analytics chart (team-wide utilization)
+     - Analytics chart (team-wide utilization)  
+     - Project management and assignment creation  
 
    - **Engineer Dashboard**:  
-     - My current and upcoming assignments  
-     - My capacity bar  
+     - **Personal assignments only**: Current and upcoming assignments  
+     - **Personal capacity**: Individual capacity status and workload  
+     - **Profile access**: View and edit own profile information  
+     - **No administrative features**: Cannot access other engineers' data
 
 6. **Search & Analytics**  
-   - Filter engineers by skill substring.  
-   - Filter projects by status (`planning`, `active`, `completed`).
+   - **Manager**: Filter engineers by skill, view all projects by status (`planning`, `active`, `completed`)  
+   - **Engineer**: View only projects they are assigned to, no search/filter capabilities
 
 7. **AI-Powered Development Approach**  
    - AI tools were used throughout: Cursor IDE, Claude, GitHub Copilot, etc.  
@@ -105,9 +89,7 @@ All data is persisted in MongoDB via Mongoose. Authentication is JWT-based, with
   - dotenv (env vars)  
   - cors, helmet (security middleware)  
 
-- **Testing / Tools**  
-  - Postman (API testing)  
-  - MongoDB Compass (DB inspection)  
+- ** Tools**  
   - Cursor IDE + Claude + GitHub Copilot (AI assistance)
 
 ---
@@ -194,10 +176,13 @@ npm run dev
 
 ### Engineer Workflow
 
-1. **Login** with engineer credentials (any seeded engineer account)
-2. **View Dashboard** - See personal assignments and capacity
-3. **View Profile** - Update skills and information
-4. **Check Assignments** - View current and upcoming projects
+1. **Login** with engineer credentials (any seeded engineer account)  
+2. **Personal Dashboard** - View only personal assignments and capacity status  
+3. **My Assignments** - View current and upcoming projects (read-only)  
+4. **Profile Management** - Update personal skills, seniority, and information  
+5. **Capacity Overview** - Monitor personal workload and availability  
+
+**Note**: Engineers have **view-only access** to assignments and projects. They cannot create, edit, or delete any assignments or projects.
 
 ---
 
@@ -213,32 +198,32 @@ npm run dev
 - `POST /api/auth/logout` - User logout
 
 ### Users/Engineers
-- `GET /api/users` - Get all users
-- `GET /api/users/search/skill` - Search users by skill
-- `POST /api/users/find-suitable` - Find suitable engineers for project (Manager only)
-- `GET /api/users/:id` - Get user by ID
-- `GET /api/users/:id/capacity` - Get engineer capacity info
-- `GET /api/users/:id/assignments` - Get engineer assignments
-- `PUT /api/users/:id` - Update user (Manager only)
-- `DELETE /api/users/:id` - Delete user (Manager only)
+- `GET /api/users` - Get all users (**Manager**: all users, **Engineer**: only self)
+- `GET /api/users/search/skill` - Search users by skill (**Manager only**)
+- `POST /api/users/find-suitable` - Find suitable engineers for project (**Manager only**)
+- `GET /api/users/:id` - Get user by ID (**Manager**: any user, **Engineer**: only self)
+- `GET /api/users/:id/capacity` - Get engineer capacity info (**Manager**: any engineer, **Engineer**: only self)
+- `GET /api/users/:id/assignments` - Get engineer assignments (**Manager**: any engineer, **Engineer**: only self)
+- `PUT /api/users/:id` - Update user (**Manager**: any user, **Engineer**: only own profile)
+- `DELETE /api/users/:id` - Delete user (**Manager only**)
 
 **Note:** `/api/engineers/*` routes also work (alias for `/api/users/*`)
 
 ### Projects
-- `GET /api/projects` - Get all projects
-- `GET /api/projects/:id` - Get project by ID
-- `POST /api/projects` - Create new project (Manager only)
-- `PUT /api/projects/:id` - Update project (Manager only)
-- `DELETE /api/projects/:id` - Delete project (Manager only)
+- `GET /api/projects` - Get all projects (**Manager**: all projects, **Engineer**: only assigned projects)
+- `GET /api/projects/:id` - Get project by ID (**Manager**: any project, **Engineer**: only if assigned)
+- `POST /api/projects` - Create new project (**Manager only**)
+- `PUT /api/projects/:id` - Update project (**Manager only**)
+- `DELETE /api/projects/:id` - Delete project (**Manager only**)
 
 ### Assignments
-- `GET /api/assignments` - Get all assignments
-- `GET /api/assignments/active` - Get active assignments
-- `GET /api/assignments/current` - Get current assignments
-- `GET /api/assignments/:id` - Get assignment by ID
-- `POST /api/assignments` - Create new assignment (Manager only)
-- `PUT /api/assignments/:id` - Update assignment (Manager only)
-- `DELETE /api/assignments/:id` - Delete assignment (Manager only)
+- `GET /api/assignments` - Get all assignments (**Manager**: all assignments, **Engineer**: only own assignments)
+- `GET /api/assignments/active` - Get active assignments (**Manager**: all active, **Engineer**: only own active)
+- `GET /api/assignments/current` - Get current assignments (**Manager**: all current, **Engineer**: only own current)
+- `GET /api/assignments/:id` - Get assignment by ID (**Manager**: any assignment, **Engineer**: only own assignments)
+- `POST /api/assignments` - Create new assignment (**Manager only**)
+- `PUT /api/assignments/:id` - Update assignment (**Manager only**)
+- `DELETE /api/assignments/:id` - Delete assignment (**Manager only**)
 
 ### Analytics
 - `GET /api/analytics/team-utilization` - Team utilization analytics (Manager only)
@@ -249,7 +234,14 @@ npm run dev
 - `GET /` - Welcome message
 - `GET /health` - Health check endpoint
 
-**Note:** All routes (except register, login, logout, and health) require authentication via JWT token in Authorization header.
+**Authentication & Authorization Notes:**  
+- All routes (except register, login, logout, and health) require JWT token in Authorization header  
+- **Manager Role**: Full access to all endpoints and data  
+- **Engineer Role**: 
+  - ✅ **Can Access**: Own profile, assignments, and capacity data  
+  - ✅ **Can Update**: Own profile information only  
+  - ❌ **Cannot Access**: Other engineers' data, analytics, create/edit/delete operations  
+  - ❌ **View Only**: Projects and assignments (read-only access)
 
 ---
 

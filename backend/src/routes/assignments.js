@@ -5,6 +5,7 @@ import {
   getAssignmentById,
   createAssignment,
   updateAssignment,
+  updateAssignmentProgress,
   deleteAssignment,
   getActiveAssignments,
   getCurrentAssignments
@@ -23,6 +24,8 @@ router.get('/:id', authenticateToken, getAssignmentById);
 router.post('/', authenticateToken, requireManagerOrAdmin, createAssignment);
 
 router.put('/:id', authenticateToken, requireManagerOrAdmin, updateAssignment);
+
+router.patch('/:id/progress', authenticateToken, updateAssignmentProgress);
 
 router.delete('/:id', authenticateToken, requireManagerOrAdmin, deleteAssignment);
 

@@ -44,6 +44,12 @@ const assignmentSchema = new mongoose.Schema({
     enum: ['active', 'completed', 'cancelled'],
     default: 'active'
   },
+  completionPercentage: {
+    type: Number,
+    min: [0, 'Completion percentage cannot be negative'],
+    max: [100, 'Completion percentage cannot exceed 100'],
+    default: 0
+  },
   notes: {
     type: String,
     trim: true
@@ -125,6 +131,41 @@ assignmentSchema.statics.getProjectResourceAllocation = function(projectId) {
           name: '$engineer.name',
           allocation: '$allocationPercentage'
         }}
+      }
+    }
+  ]);
+};
+
+// Calculate project completion based on weighted assignment completion
+assignmentSchema.statics.calculateProjectProgress = function(projectId) {
+  return this.aggregate([
+    {
+      $match: {
+        projectId: new mongoose.Types.ObjectId(projectId),
+        status: { $in: ['active', 'completed'] }
+      }
+    },
+    {
+      $group: {
+        _id: '$projectId',
+        totalWeight: { $sum: '$allocationPercentage' },
+        weightedCompletion: { 
+          $sum: { 
+            $multiply: ['$allocationPercentage', '$completionPercentage'] 
+          } 
+        }
+      }
+    },
+    {
+      $project: {
+        _id: 1,
+        projectProgress: {
+          $cond: {
+            if: { $gt: ['$totalWeight', 0] },
+            then: { $divide: ['$weightedCompletion', '$totalWeight'] },
+            else: 0
+          }
+        }
       }
     }
   ]);

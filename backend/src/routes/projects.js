@@ -5,6 +5,7 @@ import {
   getProjectById,
   createProject,
   updateProject,
+  updateProjectProgress,
   deleteProject
 } from '../controllers/projectController.js';
 
@@ -17,6 +18,8 @@ router.get('/:id', authenticateToken, getProjectById);
 router.post('/', authenticateToken, requireManagerOrAdmin, createProject);
 
 router.put('/:id', authenticateToken, requireManagerOrAdmin, updateProject);
+
+router.patch('/:id/progress', authenticateToken, requireManagerOrAdmin, updateProjectProgress);
 
 router.delete('/:id', authenticateToken, requireManagerOrAdmin, deleteProject);
 

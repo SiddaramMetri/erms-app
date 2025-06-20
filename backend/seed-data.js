@@ -110,12 +110,15 @@ async function seedData() {
         startDate: new Date('2024-01-01'),
         endDate: new Date('2024-06-30'),
         requiredSkills: [
-          { skill: 'React', level: 'intermediate', count: 2 },
-          { skill: 'Node.js', level: 'intermediate', count: 1 },
-          { skill: 'MongoDB', level: 'beginner', count: 1 }
+          { skill: 'React', level: 'intermediate', priority: 'must-have' },
+          { skill: 'Node.js', level: 'intermediate', priority: 'must-have' },
+          { skill: 'MongoDB', level: 'beginner', priority: 'nice-to-have' }
         ],
         teamSize: 4,
         status: 'active',
+        priority: 'high',
+        budget: 150000,
+        completionPercentage: 65,
         managerId: manager._id
       },
       {
@@ -124,11 +127,14 @@ async function seedData() {
         startDate: new Date('2024-02-01'),
         endDate: new Date('2024-08-31'),
         requiredSkills: [
-          { skill: 'Node.js', level: 'advanced', count: 1 },
-          { skill: 'Python', level: 'intermediate', count: 1 }
+          { skill: 'Node.js', level: 'advanced', priority: 'must-have' },
+          { skill: 'Python', level: 'intermediate', priority: 'must-have' }
         ],
         teamSize: 2,
         status: 'active',
+        priority: 'medium',
+        budget: 80000,
+        completionPercentage: 30,
         managerId: manager._id
       },
       {
@@ -137,11 +143,31 @@ async function seedData() {
         startDate: new Date('2024-03-01'),
         endDate: new Date('2024-09-30'),
         requiredSkills: [
-          { skill: 'AWS', level: 'advanced', count: 1 },
-          { skill: 'Docker', level: 'intermediate', count: 1 }
+          { skill: 'AWS', level: 'advanced', priority: 'must-have' },
+          { skill: 'Docker', level: 'intermediate', priority: 'must-have' }
         ],
         teamSize: 2,
         status: 'planning',
+        priority: 'low',
+        budget: 120000,
+        completionPercentage: 0,
+        managerId: manager._id
+      },
+      {
+        name: 'Data Analytics Dashboard',
+        description: 'Real-time analytics dashboard for business intelligence',
+        startDate: new Date('2024-04-01'),
+        endDate: new Date('2024-10-31'),
+        requiredSkills: [
+          { skill: 'React', level: 'advanced', priority: 'must-have' },
+          { skill: 'Python', level: 'advanced', priority: 'must-have' },
+          { skill: 'PostgreSQL', level: 'intermediate', priority: 'must-have' }
+        ],
+        teamSize: 3,
+        status: 'active',
+        priority: 'critical',
+        budget: 200000,
+        completionPercentage: 85,
         managerId: manager._id
       }
     ]);
@@ -157,6 +183,7 @@ async function seedData() {
         startDate: new Date('2024-01-01'),
         endDate: new Date('2024-06-30'),
         role: 'lead',
+        completionPercentage: 75,
         createdBy: manager._id
       },
       {
@@ -166,6 +193,7 @@ async function seedData() {
         startDate: new Date('2024-02-01'),
         endDate: new Date('2024-08-31'),
         role: 'developer',
+        completionPercentage: 40,
         createdBy: manager._id
       },
       {
@@ -175,6 +203,37 @@ async function seedData() {
         startDate: new Date('2024-01-15'),
         endDate: new Date('2024-05-15'),
         role: 'developer',
+        completionPercentage: 50,
+        createdBy: manager._id
+      },
+      {
+        engineerId: users[4]._id, // David
+        projectId: projects[2]._id,   // DevOps Infrastructure
+        allocationPercentage: 50,
+        startDate: new Date('2024-03-01'),
+        endDate: new Date('2024-09-30'),
+        role: 'architect',
+        completionPercentage: 10,
+        createdBy: manager._id
+      },
+      {
+        engineerId: users[2]._id, // Bob (also working on Analytics)
+        projectId: projects[3]._id,   // Data Analytics Dashboard
+        allocationPercentage: 20,
+        startDate: new Date('2024-04-01'),
+        endDate: new Date('2024-10-31'),
+        role: 'developer',
+        completionPercentage: 90,
+        createdBy: manager._id
+      },
+      {
+        engineerId: users[1]._id, // Alice (also working on Analytics)
+        projectId: projects[3]._id,   // Data Analytics Dashboard
+        allocationPercentage: 40,
+        startDate: new Date('2024-04-01'),
+        endDate: new Date('2024-10-31'),
+        role: 'lead',
+        completionPercentage: 85,
         createdBy: manager._id
       }
     ]);

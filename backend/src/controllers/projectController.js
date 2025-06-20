@@ -8,6 +8,78 @@ export const getAllProjects = async (req, res) => {
       return res.status(400).json({ error: error.details[0].message });
     }
 
+    // Engineers can only see projects they are assigned to
+    if (req.user.role === 'engineer') {
+      const engineerAssignments = await Assignment.find({
+        engineerId: req.user._id,
+        isActive: true
+      }).select('projectId');
+      
+      const projectIds = engineerAssignments.map(assignment => assignment.projectId);
+      
+      if (projectIds.length === 0) {
+        return res.json({
+          success: true,
+          data: {
+            projects: [],
+            pagination: {
+              page: 1,
+              limit: 10,
+              total: 0,
+              pages: 0
+            }
+          }
+        });
+      }
+
+      const projects = await Project.find({
+        _id: { $in: projectIds },
+        isActive: true
+      }).populate('managerId', 'name email');
+
+      const projectsWithStats = await Promise.all(
+        projects.map(async (project) => {
+          const assignments = await Assignment.find({
+            projectId: project._id,
+            status: 'active'
+          }).populate('engineerId', 'name email seniority');
+
+          // Calculate auto-progress based on assignment completion
+          const progressData = await Assignment.calculateProjectProgress(project._id);
+          const autoCalculatedProgress = progressData.length > 0 ? Math.round(progressData[0].projectProgress) : 0;
+
+          // Use manual progress if set, otherwise use auto-calculated
+          const finalProgress = project.completionPercentage !== undefined && project.completionPercentage > 0 
+            ? project.completionPercentage 
+            : autoCalculatedProgress;
+
+          return {
+            ...project.toJSON(),
+            assignments: assignments,
+            currentTeamSize: assignments.length,
+            completionPercentage: finalProgress,
+            autoCalculatedProgress: autoCalculatedProgress,
+            isOverdue: project.isOverdue,
+            durationDays: project.durationDays
+          };
+        })
+      );
+
+      return res.json({
+        success: true,
+        data: {
+          projects: projectsWithStats,
+          pagination: {
+            page: 1,
+            limit: projectsWithStats.length,
+            total: projectsWithStats.length,
+            pages: 1
+          }
+        }
+      });
+    }
+
+    // Manager/Admin can see all projects
     const {
       page = 1,
       limit = 10,
@@ -45,14 +117,26 @@ export const getAllProjects = async (req, res) => {
 
     const projectsWithStats = await Promise.all(
       projects.map(async (project) => {
-        const assignmentCount = await Assignment.countDocuments({
+        const assignments = await Assignment.find({
           projectId: project._id,
           status: 'active'
-        });
+        }).populate('engineerId', 'name email seniority');
+
+        // Calculate auto-progress based on assignment completion
+        const progressData = await Assignment.calculateProjectProgress(project._id);
+        const autoCalculatedProgress = progressData.length > 0 ? Math.round(progressData[0].projectProgress) : 0;
+
+        // Use manual progress if set, otherwise use auto-calculated
+        const finalProgress = project.completionPercentage !== undefined && project.completionPercentage > 0 
+          ? project.completionPercentage 
+          : autoCalculatedProgress;
 
         return {
           ...project.toJSON(),
-          currentTeamSize: assignmentCount,
+          assignments: assignments,
+          currentTeamSize: assignments.length,
+          completionPercentage: finalProgress,
+          autoCalculatedProgress: autoCalculatedProgress,
           isOverdue: project.isOverdue,
           durationDays: project.durationDays
         };
@@ -78,17 +162,52 @@ export const getAllProjects = async (req, res) => {
 
 export const getProjectById = async (req, res) => {
   try {
-    const project = await Project.findOne({
+    const projectQuery = {
       _id: req.params.id,
       isActive: true
-    }).populate('managerId', 'name email seniority');
+    };
+
+    // Engineers can only see projects they are assigned to
+    if (req.user.role === 'engineer') {
+      const engineerAssignment = await Assignment.findOne({
+        engineerId: req.user._id,
+        projectId: req.params.id,
+        isActive: true
+      });
+
+      if (!engineerAssignment) {
+        return res.status(404).json({ error: 'Project not found or access denied' });
+      }
+    }
+
+    const project = await Project.findOne(projectQuery)
+      .populate('managerId', 'name email seniority');
 
     if (!project) {
       return res.status(404).json({ error: 'Project not found' });
     }
 
-    const assignments = await Assignment.findByProject(project._id)
+    let assignments = await Assignment.findByProject(project._id)
       .populate('engineerId', 'name email seniority skills');
+
+    // Engineers can only see limited assignment data
+    if (req.user.role === 'engineer') {
+      assignments = assignments.map(assignment => ({
+        _id: assignment._id,
+        role: assignment.role,
+        startDate: assignment.startDate,
+        endDate: assignment.endDate,
+        allocationPercentage: assignment.allocationPercentage,
+        status: assignment.status,
+        // Only show engineer's own detailed info, others are limited
+        engineerId: assignment.engineerId._id.toString() === req.user._id.toString() 
+          ? assignment.engineerId 
+          : { 
+              _id: assignment.engineerId._id, 
+              name: assignment.engineerId.name 
+            }
+      }));
+    }
 
     const projectData = {
       ...project.toJSON(),
@@ -171,6 +290,34 @@ export const updateProject = async (req, res) => {
     res.json({
       success: true,
       message: 'Project updated successfully',
+      data: { project }
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const updateProjectProgress = async (req, res) => {
+  try {
+    const { completionPercentage } = req.body;
+    
+    if (completionPercentage < 0 || completionPercentage > 100) {
+      return res.status(400).json({ error: 'Completion percentage must be between 0 and 100' });
+    }
+
+    const project = await Project.findByIdAndUpdate(
+      req.params.id,
+      { completionPercentage },
+      { new: true, runValidators: true }
+    ).populate('managerId', 'name email');
+
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    res.json({
+      success: true,
+      message: 'Project progress updated successfully',
       data: { project }
     });
   } catch (error) {

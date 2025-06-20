@@ -8,6 +8,47 @@ export const getAllUsers = async (req, res) => {
       return res.status(400).json({ error: error.details[0].message });
     }
 
+    // Engineers can only see their own data
+    if (req.user.role === 'engineer') {
+      const engineer = await User.findOne({
+        _id: req.user._id,
+        role: 'engineer',
+        isActive: true
+      }).select('-password');
+
+      if (!engineer) {
+        return res.status(404).json({ error: 'Engineer not found' });
+      }
+
+      // Get current allocations
+      const allocations = await Assignment.getUserCurrentAllocation(engineer._id);
+      const currentUtilization = allocations.length > 0 ? allocations[0].totalAllocation : 0;
+
+      // Get current assignments with project details
+      const assignments = await Assignment.findByUser(engineer._id, 'active');
+
+      const engineerData = {
+        ...engineer.toJSON(),
+        currentUtilization,
+        availableCapacity: Math.max(0, engineer.maxCapacity - currentUtilization),
+        assignments: assignments
+      };
+
+      return res.json({
+        success: true,
+        data: {
+          engineers: [engineerData],
+          pagination: {
+            page: 1,
+            limit: 1,
+            total: 1,
+            pages: 1
+          }
+        }
+      });
+    }
+
+    // Manager/Admin can see all engineers
     const {
       page = 1,
       limit = 10,
@@ -61,10 +102,14 @@ export const getAllUsers = async (req, res) => {
         const allocations = await Assignment.getUserCurrentAllocation(engineer._id);
         const currentUtilization = allocations.length > 0 ? allocations[0].totalAllocation : 0;
         
+        // Get current assignments with project details
+        const assignments = await Assignment.findByUser(engineer._id, 'active');
+        
         return {
           ...engineer.toJSON(),
           currentUtilization,
-          availableCapacity: Math.max(0, engineer.maxCapacity - currentUtilization)
+          availableCapacity: Math.max(0, engineer.maxCapacity - currentUtilization),
+          assignments: assignments
         };
       })
     );
@@ -130,9 +175,38 @@ export const updateUser = async (req, res) => {
       return res.status(400).json({ error: error.details[0].message });
     }
 
+    const targetUserId = req.params.id;
+    
+    // Engineers can only update their own profile
+    if (req.user.role === 'engineer' && req.user._id.toString() !== targetUserId) {
+      return res.status(403).json({ 
+        error: 'Access denied. Engineers can only update their own profile.' 
+      });
+    }
+
+    // For engineers, restrict what fields they can update
+    let updateData = req.body;
+    if (req.user.role === 'engineer') {
+      // Engineers can only update specific profile fields
+      const allowedFields = ['name', 'skills', 'seniority', 'department'];
+      updateData = {};
+      allowedFields.forEach(field => {
+        if (req.body[field] !== undefined) {
+          updateData[field] = req.body[field];
+        }
+      });
+      
+      // Engineers cannot change role, maxCapacity, or isActive
+      if (req.body.role || req.body.maxCapacity !== undefined || req.body.isActive !== undefined) {
+        return res.status(403).json({ 
+          error: 'Engineers cannot modify role, capacity, or active status.' 
+        });
+      }
+    }
+
     const engineer = await User.findByIdAndUpdate(
-      req.params.id,
-      req.body,
+      targetUserId,
+      updateData,
       { new: true, runValidators: true }
     ).select('-password');
 
@@ -227,6 +301,13 @@ export const getUserAssignments = async (req, res) => {
 
 export const searchUsersBySkill = async (req, res) => {
   try {
+    // Engineers cannot search for other engineers
+    if (req.user.role === 'engineer') {
+      return res.status(403).json({ 
+        error: 'Access denied. Engineers cannot search for other users.' 
+      });
+    }
+
     const { skill, level = 'beginner', available = false } = req.query;
 
     if (!skill) {
@@ -268,6 +349,13 @@ export const searchUsersBySkill = async (req, res) => {
 
 export const findSuitableUsersForProject = async (req, res) => {
   try {
+    // Engineers cannot search for suitable engineers for projects
+    if (req.user.role === 'engineer') {
+      return res.status(403).json({ 
+        error: 'Access denied. Engineers cannot search for suitable engineers for projects.' 
+      });
+    }
+
     const { requiredSkills, minimumCapacity = 10 } = req.body;
 
     if (!requiredSkills || !Array.isArray(requiredSkills) || requiredSkills.length === 0) {

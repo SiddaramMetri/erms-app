@@ -20,8 +20,13 @@ export const getAllAssignments = async (req, res) => {
 
     const query = {};
 
+    // Engineers can only see their own assignments
+    if (req.user.role === 'engineer') {
+      query.engineerId = req.user._id;
+    }
+
     if (status) query.status = status;
-    if (engineerId) query.engineerId = engineerId;
+    if (engineerId && req.user.role !== 'engineer') query.engineerId = engineerId;
     if (projectId) query.projectId = projectId;
 
     const skip = (page - 1) * limit;
@@ -65,12 +70,19 @@ export const getAllAssignments = async (req, res) => {
 
 export const getAssignmentById = async (req, res) => {
   try {
-    const assignment = await Assignment.findById(req.params.id)
+    const query = { _id: req.params.id };
+    
+    // Engineers can only see their own assignments
+    if (req.user.role === 'engineer') {
+      query.engineerId = req.user._id;
+    }
+
+    const assignment = await Assignment.findOne(query)
     .populate('engineerId', 'name email seniority department skills maxCapacity')
     .populate('projectId', 'name description status priority startDate endDate');
 
     if (!assignment) {
-      return res.status(404).json({ error: 'Assignment not found' });
+      return res.status(404).json({ error: 'Assignment not found or access denied' });
     }
 
     res.json({
@@ -104,6 +116,42 @@ export const createAssignment = async (req, res) => {
     if (!project) {
       console.log('Project not found:', projectId);
       return res.status(404).json({ error: 'Project not found' });
+    }
+
+    // Check if project team is already full
+    const currentAssignments = await Assignment.countDocuments({
+      projectId: projectId,
+      status: 'active'
+    });
+
+    if (currentAssignments >= project.teamSize) {
+      return res.status(400).json({ 
+        error: `Project team is full. Maximum team size is ${project.teamSize}, currently has ${currentAssignments} members.` 
+      });
+    }
+
+    // Check if engineer is already assigned to this project
+    const existingAssignment = await Assignment.findOne({
+      engineerId: engineerId,
+      projectId: projectId,
+      status: 'active'
+    });
+
+    if (existingAssignment) {
+      return res.status(400).json({ 
+        error: 'Engineer is already assigned to this project' 
+      });
+    }
+
+    // Check engineer's capacity
+    const currentAllocations = await Assignment.getUserCurrentAllocation(engineerId);
+    const currentUtilization = currentAllocations.length > 0 ? currentAllocations[0].totalAllocation : 0;
+    const newTotal = currentUtilization + req.body.allocationPercentage;
+
+    if (newTotal > engineer.maxCapacity) {
+      return res.status(400).json({ 
+        error: `Engineer capacity exceeded. Current: ${currentUtilization}%, Requested: ${req.body.allocationPercentage}%, Maximum: ${engineer.maxCapacity}%` 
+      });
     }
 
     const assignment = new Assignment({
@@ -191,6 +239,49 @@ export const updateAssignment = async (req, res) => {
   }
 };
 
+export const updateAssignmentProgress = async (req, res) => {
+  try {
+    const { completionPercentage } = req.body;
+    
+    if (completionPercentage < 0 || completionPercentage > 100) {
+      return res.status(400).json({ error: 'Completion percentage must be between 0 and 100' });
+    }
+
+    const assignment = await Assignment.findById(req.params.id);
+    if (!assignment) {
+      return res.status(404).json({ error: 'Assignment not found' });
+    }
+
+    // Engineers can only update their own assignments
+    if (req.user.role === 'engineer' && assignment.engineerId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ error: 'You can only update your own assignments' });
+    }
+
+    assignment.completionPercentage = completionPercentage;
+    await assignment.save();
+
+    // Auto-update project progress based on all assignment completions
+    const progressData = await Assignment.calculateProjectProgress(assignment.projectId);
+    if (progressData.length > 0) {
+      const newProjectProgress = Math.round(progressData[0].projectProgress);
+      await Project.findByIdAndUpdate(assignment.projectId, {
+        completionPercentage: newProjectProgress
+      });
+    }
+
+    await assignment.populate('engineerId', 'name email');
+    await assignment.populate('projectId', 'name');
+
+    res.json({
+      success: true,
+      message: 'Assignment progress updated successfully',
+      data: { assignment }
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 export const deleteAssignment = async (req, res) => {
   try {
     const assignment = await Assignment.findByIdAndUpdate(
@@ -214,7 +305,14 @@ export const deleteAssignment = async (req, res) => {
 
 export const getActiveAssignments = async (req, res) => {
   try {
-    const assignments = await Assignment.find({ status: 'active' })
+    const query = { status: 'active' };
+    
+    // Engineers can only see their own active assignments
+    if (req.user.role === 'engineer') {
+      query.engineerId = req.user._id;
+    }
+
+    const assignments = await Assignment.find(query)
       .populate('engineerId', 'name email seniority department')
       .populate('projectId', 'name status priority');
 
