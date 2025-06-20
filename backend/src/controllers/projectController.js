@@ -18,7 +18,7 @@ export const getAllProjects = async (req, res) => {
       managerId
     } = req.query;
 
-    const query = { isActive: true };
+    const query = {};
 
     if (search) {
       query.$or = [
@@ -47,7 +47,7 @@ export const getAllProjects = async (req, res) => {
       projects.map(async (project) => {
         const assignmentCount = await Assignment.countDocuments({
           projectId: project._id,
-          isActive: true
+          status: 'active'
         });
 
         return {

@@ -1,4 +1,4 @@
-import { Assignment, Engineer, Project } from '../models/index.js';
+import { Assignment, User, Project } from '../models/index.js';
 import { validateAssignment, validateAssignmentUpdate, validateQueryParams } from '../utils/validation.js';
 
 export const getAllAssignments = async (req, res) => {
@@ -18,7 +18,7 @@ export const getAllAssignments = async (req, res) => {
       projectId
     } = req.query;
 
-    const query = { isActive: true };
+    const query = {};
 
     if (status) query.status = status;
     if (engineerId) query.engineerId = engineerId;
@@ -29,7 +29,7 @@ export const getAllAssignments = async (req, res) => {
     sortObj[sort] = sort === 'startDate' || sort === 'endDate' ? -1 : 1;
 
     let assignments = await Assignment.find(query)
-      .populate('engineerId', 'name email seniority')
+      .populate('engineerId', 'name email seniority department department')
       .populate('projectId', 'name status priority')
       .sort(sortObj)
       .skip(skip)
@@ -65,11 +65,8 @@ export const getAllAssignments = async (req, res) => {
 
 export const getAssignmentById = async (req, res) => {
   try {
-    const assignment = await Assignment.findOne({
-      _id: req.params.id,
-      isActive: true
-    })
-    .populate('engineerId', 'name email seniority skills maxCapacity')
+    const assignment = await Assignment.findById(req.params.id)
+    .populate('engineerId', 'name email seniority department skills maxCapacity')
     .populate('projectId', 'name description status priority startDate endDate');
 
     if (!assignment) {
@@ -97,22 +94,25 @@ export const createAssignment = async (req, res) => {
 
     const { engineerId, projectId } = req.body;
 
-    const engineer = await Engineer.findOne({ _id: engineerId, isActive: true });
+    const engineer = await User.findOne({ _id: engineerId, role: 'engineer', isActive: true });
     if (!engineer) {
       console.log('Engineer not found:', engineerId);
       return res.status(404).json({ error: 'Engineer not found' });
     }
 
-    const project = await Project.findOne({ _id: projectId, isActive: true });
+    const project = await Project.findById(projectId);
     if (!project) {
       console.log('Project not found:', projectId);
       return res.status(404).json({ error: 'Project not found' });
     }
 
-    const assignment = new Assignment(req.body);
+    const assignment = new Assignment({
+      ...req.body,
+      createdBy: req.user._id
+    });
     await assignment.save();
 
-    await assignment.populate('engineerId', 'name email seniority');
+    await assignment.populate('engineerId', 'name email seniority department');
     await assignment.populate('projectId', 'name status priority');
 
     res.status(201).json({
@@ -141,7 +141,7 @@ export const updateAssignment = async (req, res) => {
       req.body,
       { new: true, runValidators: true }
     )
-    .populate('engineerId', 'name email seniority')
+    .populate('engineerId', 'name email seniority department')
     .populate('projectId', 'name status priority');
 
     if (!assignment) {
@@ -181,7 +181,9 @@ export const deleteAssignment = async (req, res) => {
 
 export const getActiveAssignments = async (req, res) => {
   try {
-    const assignments = await Assignment.findActive();
+    const assignments = await Assignment.find({ status: 'active' })
+      .populate('engineerId', 'name email seniority department')
+      .populate('projectId', 'name status priority');
 
     res.json({
       success: true,
@@ -194,19 +196,18 @@ export const getActiveAssignments = async (req, res) => {
 
 export const getCurrentAssignments = async (req, res) => {
   try {
-    const { date } = req.query;
-    const queryDate = date ? new Date(date) : new Date();
-
-    const assignments = await Assignment.findCurrent(queryDate)
-      .populate('engineerId', 'name email seniority')
+    const userId = req.user._id;
+    
+    const assignments = await Assignment.find({
+      engineerId: userId,
+      status: 'active'
+    })
+      .populate('engineerId', 'name email seniority department')
       .populate('projectId', 'name status priority');
 
     res.json({
       success: true,
-      data: { 
-        assignments,
-        queryDate: queryDate.toISOString()
-      }
+      data: { assignments }
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
