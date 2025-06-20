@@ -62,7 +62,7 @@ const Engineers: React.FC = () => {
     
     const matchesSkill = skillFilter === '' || 
                         (engineer.skills || []).some(skill => 
-                          skill.toLowerCase().includes(skillFilter.toLowerCase())
+                          skill.skill.toLowerCase().includes(skillFilter.toLowerCase())
                         );
     
     const matchesSeniority = seniorityFilter === '' || engineer.seniority === seniorityFilter;
@@ -198,9 +198,9 @@ const Engineers: React.FC = () => {
                 <div>
                   <p className="text-sm font-medium text-gray-700 mb-2">Skills</p>
                   <div className="flex flex-wrap gap-1">
-                    {(engineer.skills || []).map((skill) => (
-                      <Badge key={skill} variant="secondary" className="text-xs">
-                        {skill}
+                    {(engineer.skills || []).map((skill, index) => (
+                      <Badge key={index} variant="secondary" className="text-xs">
+                        {skill.skill} ({skill.level})
                       </Badge>
                     ))}
                   </div>

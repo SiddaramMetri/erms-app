@@ -1,4 +1,4 @@
-import type { EngineerWithAssignments, User } from '@/types';
+import type { EngineerWithAssignments, User, Skill } from '@/types';
 import api from './api';
 import type { ApiResponse } from './authService';
 
@@ -6,7 +6,7 @@ export interface CreateEngineerData {
   name: string;
   email: string;
   password: string;
-  skills: string[];
+  skills: Skill[];
   seniority: 'junior' | 'mid' | 'senior';
   maxCapacity: number;
   department: string;

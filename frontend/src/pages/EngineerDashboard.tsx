@@ -130,9 +130,9 @@ const EngineerDashboard: React.FC = () => {
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-2">
-            {user?.skills?.map((skill) => (
-              <Badge key={skill} variant="secondary" className="text-sm">
-                {skill}
+            {user?.skills?.map((skill, index) => (
+              <Badge key={index} variant="secondary" className="text-sm">
+                {skill.skill} ({skill.level})
               </Badge>
             ))}
           </div>

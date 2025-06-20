@@ -7,7 +7,8 @@ import Modal from '@/components/ui/modal';
 import { X, Plus, Loader2 } from 'lucide-react';
 import { engineerService, type CreateEngineerData } from '@/services/engineerService';
 import { validateForm as validateFormData } from '@/utils/formValidation';
-import type { EngineerWithAssignments } from '@/types';
+import { useToast } from '@/components/ui/toast';
+import type { EngineerWithAssignments, Skill } from '@/types';
 
 interface EngineerFormProps {
   isOpen: boolean;
@@ -20,7 +21,7 @@ interface FormData extends Record<string, unknown> {
   name: string;
   email: string;
   password: string;
-  skills: string[];
+  skills: Skill[];
   seniority: 'junior' | 'mid' | 'senior';
   maxCapacity: number;
   department: string;
@@ -32,6 +33,8 @@ const EngineerForm: React.FC<EngineerFormProps> = ({
   onSuccess,
   engineer
 }) => {
+  const { showToast } = useToast();
+  
   const [formData, setFormData] = useState<FormData>({
     name: engineer?.name || '',
     email: engineer?.email || '',
@@ -43,6 +46,7 @@ const EngineerForm: React.FC<EngineerFormProps> = ({
   });
 
   const [newSkill, setNewSkill] = useState('');
+  const [skillLevel, setSkillLevel] = useState<Skill['level']>('intermediate');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
 
@@ -101,14 +105,25 @@ const EngineerForm: React.FC<EngineerFormProps> = ({
       }
 
       if (response.success) {
+        showToast({
+          type: 'success',
+          title: isEditing ? 'Engineer Updated' : 'Engineer Created',
+          message: `${formData.name} has been ${isEditing ? 'updated' : 'created'} successfully.`
+        });
         onSuccess();
         onClose();
         resetForm();
       } else {
         setErrors({ submit: response.message || 'Something went wrong' });
       }
-    } catch (error: any) {
-      setErrors({ submit: error.message || 'Failed to save engineer' });
+    } catch (error: unknown) {
+      const errorMessage = (error as Error).message || 'Failed to save engineer';
+      setErrors({ submit: errorMessage });
+      showToast({
+        type: 'error',
+        title: 'Error',
+        message: errorMessage
+      });
     } finally {
       setIsLoading(false);
     }
@@ -129,19 +144,24 @@ const EngineerForm: React.FC<EngineerFormProps> = ({
   };
 
   const addSkill = () => {
-    if (newSkill.trim() && !formData.skills.includes(newSkill.trim())) {
+    if (newSkill.trim() && !formData.skills.some(s => s.skill === newSkill.trim())) {
+      const newSkillObj: Skill = {
+        skill: newSkill.trim(),
+        level: skillLevel
+      };
       setFormData(prev => ({
         ...prev,
-        skills: [...prev.skills, newSkill.trim()]
+        skills: [...prev.skills, newSkillObj]
       }));
       setNewSkill('');
+      setSkillLevel('intermediate');
     }
   };
 
-  const removeSkill = (skillToRemove: string) => {
+  const removeSkill = (skillToRemove: Skill) => {
     setFormData(prev => ({
       ...prev,
-      skills: prev.skills.filter(skill => skill !== skillToRemove)
+      skills: prev.skills.filter(skill => skill.skill !== skillToRemove.skill)
     }));
   };
 
@@ -256,13 +276,23 @@ const EngineerForm: React.FC<EngineerFormProps> = ({
           <Label>Skills *</Label>
           
           {/* Add skill input */}
-          <div className="flex gap-2">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
             <Input
               value={newSkill}
               onChange={(e) => setNewSkill(e.target.value)}
               placeholder="Add a skill (e.g., React, Python, AWS)"
               onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addSkill())}
             />
+            <select
+              value={skillLevel}
+              onChange={(e) => setSkillLevel(e.target.value as Skill['level'])}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            >
+              <option value="beginner">Beginner</option>
+              <option value="intermediate">Intermediate</option>
+              <option value="advanced">Advanced</option>
+              <option value="expert">Expert</option>
+            </select>
             <Button
               type="button"
               onClick={addSkill}
@@ -277,8 +307,11 @@ const EngineerForm: React.FC<EngineerFormProps> = ({
           {formData.skills.length > 0 ? (
             <div className="flex flex-wrap gap-2">
               {formData.skills.map((skill, index) => (
-                <Badge key={index} variant="secondary" className="text-sm">
-                  {skill}
+                <div key={index} className="flex items-center space-x-1 bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                  <Badge variant="secondary" className="text-sm">
+                    {skill.skill}
+                  </Badge>
+                  <span className="text-xs text-gray-600">({skill.level})</span>
                   <button
                     type="button"
                     onClick={() => removeSkill(skill)}
@@ -286,7 +319,7 @@ const EngineerForm: React.FC<EngineerFormProps> = ({
                   >
                     <X className="h-3 w-3" />
                   </button>
-                </Badge>
+                </div>
               ))}
             </div>
           ) : (
