@@ -58,8 +58,8 @@ export const requireRole = (...roles) => {
   };
 };
 
-// Middleware to check if user is manager
-export const requireManagerOrAdmin = requireRole('manager');
+// Middleware to check if user is manager or admin
+export const requireManagerOrAdmin = requireRole('manager', 'admin');
 
 // Middleware to check if user is admin
 export const requireAdmin = requireRole('admin');

@@ -17,13 +17,7 @@ const projectSchema = new mongoose.Schema({
   },
   endDate: {
     type: Date,
-    required: [true, 'End date is required'],
-    validate: {
-      validator: function(value) {
-        return value > this.startDate;
-      },
-      message: 'End date must be after start date'
-    }
+    required: [true, 'End date is required']
   },
   requiredSkills: [{
     skill: {
@@ -136,6 +130,20 @@ projectSchema.pre('save', function(next) {
   if (this.isModified('status') && this.status === 'completed' && !this.actualEndDate) {
     this.actualEndDate = new Date();
     this.completionPercentage = 100;
+  }
+  next();
+});
+
+// Pre-validate hook to handle date validation more intelligently
+projectSchema.pre('validate', function(next) {
+  // Custom date validation to handle edge cases
+  if (this.startDate && this.endDate) {
+    const startDate = new Date(this.startDate);
+    const endDate = new Date(this.endDate);
+    
+    if (endDate <= startDate) {
+      this.invalidate('endDate', 'End date must be after start date');
+    }
   }
   next();
 });

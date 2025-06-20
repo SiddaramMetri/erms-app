@@ -77,8 +77,8 @@ export const validateProject = (data) => {
       Joi.object({
         skill: Joi.string().required(),
         level: Joi.string().valid('beginner', 'intermediate', 'advanced', 'expert').required(),
-        count: Joi.number().min(1).required()
-      })
+        priority: Joi.string().valid('must-have', 'nice-to-have').required()
+      }).unknown(false)
     ).optional(),
     teamSize: Joi.number().min(1).max(50).required(),
     status: Joi.string().valid('planning', 'active', 'on-hold', 'completed', 'cancelled').optional(),
@@ -102,8 +102,8 @@ export const validateProjectUpdate = (data) => {
       Joi.object({
         skill: Joi.string().required(),
         level: Joi.string().valid('beginner', 'intermediate', 'advanced', 'expert').required(),
-        count: Joi.number().min(1).required()
-      })
+        priority: Joi.string().valid('must-have', 'nice-to-have').required()
+      }).unknown(false)
     ).optional(),
     teamSize: Joi.number().min(1).max(50).optional(),
     status: Joi.string().valid('planning', 'active', 'on-hold', 'completed', 'cancelled').optional(),

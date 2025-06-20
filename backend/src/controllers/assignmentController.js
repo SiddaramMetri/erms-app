@@ -284,21 +284,29 @@ export const updateAssignmentProgress = async (req, res) => {
 
 export const deleteAssignment = async (req, res) => {
   try {
-    const assignment = await Assignment.findByIdAndUpdate(
-      req.params.id,
-      { isActive: false },
-      { new: true }
-    );
+    console.log('Deleting assignment:', req.params.id);
+
+    // Check if assignment exists
+    const existingAssignment = await Assignment.findById(req.params.id);
+    if (!existingAssignment) {
+      return res.status(404).json({ error: 'Assignment not found' });
+    }
+
+    // Actually delete the assignment (hard delete)
+    const assignment = await Assignment.findByIdAndDelete(req.params.id);
 
     if (!assignment) {
       return res.status(404).json({ error: 'Assignment not found' });
     }
 
+    console.log('Assignment deleted successfully:', assignment._id);
+
     res.json({
       success: true,
-      message: 'Assignment deactivated successfully'
+      message: 'Assignment deleted successfully'
     });
   } catch (error) {
+    console.error('Delete assignment error:', error);
     res.status(500).json({ error: error.message });
   }
 };

@@ -272,9 +272,24 @@ export const createProject = async (req, res) => {
 
 export const updateProject = async (req, res) => {
   try {
+    console.log('Updating project with data:', req.body);
+    console.log('Project dates:', { startDate: req.body.startDate, endDate: req.body.endDate });
+    
     const { error } = validateProjectUpdate(req.body);
     if (error) {
+      console.log('Joi validation error:', error.details[0].message);
       return res.status(400).json({ error: error.details[0].message });
+    }
+
+    // Additional date validation for updates
+    if (req.body.startDate && req.body.endDate) {
+      const startDate = new Date(req.body.startDate);
+      const endDate = new Date(req.body.endDate);
+      
+      if (endDate <= startDate) {
+        console.log('Date validation failed:', { startDate, endDate });
+        return res.status(400).json({ error: 'End date must be after start date' });
+      }
     }
 
     const project = await Project.findByIdAndUpdate(
@@ -293,6 +308,10 @@ export const updateProject = async (req, res) => {
       data: { project }
     });
   } catch (error) {
+    console.error('Project update error:', error);
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ error: error.message });
+    }
     res.status(500).json({ error: error.message });
   }
 };
