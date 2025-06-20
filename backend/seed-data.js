@@ -23,13 +23,26 @@ async function seedData() {
     const users = await User.create([
       {
         name: 'John Manager',
-        email: 'manager@company.com',
+        email: 'manager@gmail.com',
         password: 'password123',
         role: 'manager'
       },
       {
+        name: 'Engineer Alice',
+        email: 'engineer@gmail.com',
+        password: 'password123',
+        role: 'engineer',
+        department: 'Frontend',
+        seniority: 'senior',
+        maxCapacity: 100,
+        skills: [
+          { skill: 'React', level: 'advanced' },
+          { skill: 'Node.js', level: 'intermediate' }
+        ]
+      },
+      {
         name: 'Alice Johnson',
-        email: 'alice@company.com',
+        email: 'alice@gmail.com',
         password: 'password123',
         role: 'engineer',
         department: 'Frontend',
@@ -43,7 +56,7 @@ async function seedData() {
       },
       {
         name: 'Bob Smith',
-        email: 'bob@company.com',
+        email: 'bob@gmail.com',
         password: 'password123',
         role: 'engineer',
         department: 'Backend',
@@ -57,7 +70,7 @@ async function seedData() {
       },
       {
         name: 'Carol Wilson',
-        email: 'carol@company.com',
+        email: 'carol@gmail.com',
         password: 'password123',
         role: 'engineer',
         department: 'Frontend',
@@ -71,7 +84,7 @@ async function seedData() {
       },
       {
         name: 'David Chen',
-        email: 'david@company.com',
+        email: 'david@gmail.com',
         password: 'password123',
         role: 'engineer',
         department: 'DevOps',
@@ -174,8 +187,8 @@ async function seedData() {
     console.log(`   Projects: ${projects.length}`);
     console.log(`   Assignments: ${assignments.length}`);
     console.log('\n🔑 Login credentials:');
-    console.log('   Manager: manager@company.com / password123');
-    console.log('   Engineers: alice@company.com, bob@company.com, etc. / password123');
+    console.log('   Manager: manager@gmail.com / password123');
+    console.log('   Engineers: alice@gmail.com, bob@gmail.com, engineer@gmail.com etc. / password123');
 
     process.exit(0);
   } catch (error) {
