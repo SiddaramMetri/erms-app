@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import Modal from '@/components/ui/modal';
 import { X, Plus, Loader2, Calendar } from 'lucide-react';
 import { projectService, type CreateProjectData } from '@/services/projectService';
+import { useAuth } from '@/context/AuthContext';
 
 interface ProjectFormProps {
   isOpen: boolean;
@@ -14,15 +15,21 @@ interface ProjectFormProps {
   project?: any; // For editing existing project
 }
 
+interface SkillRequirement {
+  skill: string;
+  level: 'beginner' | 'intermediate' | 'advanced' | 'expert';
+  count: number;
+}
+
 interface FormData {
   name: string;
   description: string;
   startDate: string;
   endDate: string;
-  requiredSkills: string[];
+  requiredSkills: SkillRequirement[];
   teamSize: number;
   budget: number;
-  priority: 'low' | 'medium' | 'high';
+  priority: 'low' | 'medium' | 'high' | 'critical';
   status: 'planning' | 'active' | 'completed';
 }
 
@@ -32,11 +39,13 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
   onSuccess,
   project
 }) => {
+  const { user } = useAuth();
+  
   const [formData, setFormData] = useState<FormData>({
     name: project?.name || '',
     description: project?.description || '',
-    startDate: project?.startDate ? project.startDate.split('T')[0] : '',
-    endDate: project?.endDate ? project.endDate.split('T')[0] : '',
+    startDate: project?.startDate ? new Date(project.startDate).toISOString().split('T')[0] : '',
+    endDate: project?.endDate ? new Date(project.endDate).toISOString().split('T')[0] : '',
     requiredSkills: project?.requiredSkills || [],
     teamSize: project?.teamSize || 1,
     budget: project?.budget || 0,
@@ -45,6 +54,8 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
   });
 
   const [newSkill, setNewSkill] = useState('');
+  const [skillLevel, setSkillLevel] = useState<SkillRequirement['level']>('intermediate');
+  const [skillCount, setSkillCount] = useState(1);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
 
@@ -123,8 +134,10 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
           teamSize: formData.teamSize,
           status: formData.status,
           budget: formData.budget,
-          priority: formData.priority
+          priority: formData.priority,
+          managerId: user?._id || ''
         };
+        console.log('Submitting project data:', submitData);
         response = await projectService.createProject(submitData);
       }
 
@@ -159,19 +172,29 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
   };
 
   const addSkill = () => {
-    if (newSkill.trim() && !formData.requiredSkills.includes(newSkill.trim())) {
-      setFormData(prev => ({
-        ...prev,
-        requiredSkills: [...prev.requiredSkills, newSkill.trim()]
-      }));
-      setNewSkill('');
+    if (newSkill.trim()) {
+      const skillExists = formData.requiredSkills.some(s => s.skill === newSkill.trim());
+      if (!skillExists) {
+        const newSkillObj: SkillRequirement = {
+          skill: newSkill.trim(),
+          level: skillLevel,
+          count: skillCount
+        };
+        setFormData(prev => ({
+          ...prev,
+          requiredSkills: [...prev.requiredSkills, newSkillObj]
+        }));
+        setNewSkill('');
+        setSkillLevel('intermediate');
+        setSkillCount(1);
+      }
     }
   };
 
-  const removeSkill = (skillToRemove: string) => {
+  const removeSkill = (skillToRemove: SkillRequirement) => {
     setFormData(prev => ({
       ...prev,
-      requiredSkills: prev.requiredSkills.filter(skill => skill !== skillToRemove)
+      requiredSkills: prev.requiredSkills.filter(skill => skill.skill !== skillToRemove.skill)
     }));
   };
 
@@ -305,6 +328,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
               <option value="low">Low Priority</option>
               <option value="medium">Medium Priority</option>
               <option value="high">High Priority</option>
+              <option value="critical">Critical Priority</option>
             </select>
           </div>
         </div>
@@ -331,37 +355,60 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
           <Label>Required Skills *</Label>
           
           {/* Add skill input */}
-          <div className="flex gap-2">
-            <Input
-              value={newSkill}
-              onChange={(e) => setNewSkill(e.target.value)}
-              placeholder="Add a required skill (e.g., React, Python, AWS)"
-              onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addSkill())}
-            />
-            <Button
-              type="button"
-              onClick={addSkill}
-              disabled={!newSkill.trim()}
-              className="px-3"
-            >
-              <Plus className="h-4 w-4" />
-            </Button>
+          <div className="space-y-3 p-4 border rounded-lg bg-gray-50">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+              <Input
+                value={newSkill}
+                onChange={(e) => setNewSkill(e.target.value)}
+                placeholder="Skill name (e.g., React)"
+                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addSkill())}
+              />
+              <select
+                value={skillLevel}
+                onChange={(e) => setSkillLevel(e.target.value as SkillRequirement['level'])}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              >
+                <option value="beginner">Beginner</option>
+                <option value="intermediate">Intermediate</option>
+                <option value="advanced">Advanced</option>
+                <option value="expert">Expert</option>
+              </select>
+              <Input
+                type="number"
+                min="1"
+                value={skillCount}
+                onChange={(e) => setSkillCount(parseInt(e.target.value) || 1)}
+                placeholder="Count"
+              />
+              <Button
+                type="button"
+                onClick={addSkill}
+                disabled={!newSkill.trim()}
+                className="px-3"
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
 
           {/* Skills list */}
           {formData.requiredSkills.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
+            <div className="space-y-2">
               {formData.requiredSkills.map((skill, index) => (
-                <Badge key={index} variant="secondary" className="text-sm">
-                  {skill}
+                <div key={index} className="flex items-center justify-between p-2 border rounded">
+                  <div className="flex items-center space-x-2">
+                    <Badge variant="secondary">{skill.skill}</Badge>
+                    <span className="text-sm text-gray-600">{skill.level}</span>
+                    <span className="text-sm text-gray-500">({skill.count} needed)</span>
+                  </div>
                   <button
                     type="button"
                     onClick={() => removeSkill(skill)}
-                    className="ml-2 hover:text-red-600"
+                    className="text-red-600 hover:text-red-800"
                   >
-                    <X className="h-3 w-3" />
+                    <X className="h-4 w-4" />
                   </button>
-                </Badge>
+                </div>
               ))}
             </div>
           ) : (

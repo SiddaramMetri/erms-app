@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -20,82 +20,8 @@ import { engineerService } from '@/services/engineerService';
 import type { EngineerWithAssignments } from '@/types';
 import EngineerForm from '@/components/forms/EngineerForm';
 import AssignmentForm from '@/components/forms/AssignmentForm';
+import { getCapacityInfo, getTeamCapacityStats } from '@/utils/capacityCalculations';
 
-// Mock engineers data
-const mockEngineers = [
-  {
-    id: '1',
-    name: 'Alice Johnson',
-    email: 'alice.johnson@company.com',
-    role: 'engineer',
-    skills: ['React', 'TypeScript', 'Node.js', 'GraphQL'],
-    seniority: 'senior',
-    maxCapacity: 100,
-    currentCapacity: 85,
-    department: 'Frontend',
-    currentProjects: [
-      { name: 'E-commerce Platform', allocation: 60 },
-      { name: 'Analytics Dashboard', allocation: 25 }
-    ]
-  },
-  {
-    id: '2',
-    name: 'Bob Smith',
-    email: 'bob.smith@company.com',
-    role: 'engineer',
-    skills: ['Python', 'Django', 'PostgreSQL', 'Docker'],
-    seniority: 'mid',
-    maxCapacity: 100,
-    currentCapacity: 60,
-    department: 'Backend',
-    currentProjects: [
-      { name: 'Mobile App Backend', allocation: 60 }
-    ]
-  },
-  {
-    id: '3',
-    name: 'Carol Wilson',
-    email: 'carol.wilson@company.com',
-    role: 'engineer',
-    skills: ['React', 'Vue.js', 'CSS', 'Figma'],
-    seniority: 'junior',
-    maxCapacity: 50,
-    currentCapacity: 40,
-    department: 'Frontend',
-    currentProjects: [
-      { name: 'Design System', allocation: 40 }
-    ]
-  },
-  {
-    id: '4',
-    name: 'David Chen',
-    email: 'david.chen@company.com',
-    role: 'engineer',
-    skills: ['Node.js', 'MongoDB', 'AWS', 'Kubernetes'],
-    seniority: 'senior',
-    maxCapacity: 100,
-    currentCapacity: 95,
-    department: 'DevOps',
-    currentProjects: [
-      { name: 'Infrastructure Migration', allocation: 50 },
-      { name: 'CI/CD Pipeline', allocation: 45 }
-    ]
-  },
-  {
-    id: '5',
-    name: 'Emily Davis',
-    email: 'emily.davis@company.com',
-    role: 'engineer',
-    skills: ['Java', 'Spring Boot', 'Microservices', 'Kafka'],
-    seniority: 'mid',
-    maxCapacity: 100,
-    currentCapacity: 30,
-    department: 'Backend',
-    currentProjects: [
-      { name: 'Order Management System', allocation: 30 }
-    ]
-  }
-];
 
 const Engineers: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -106,7 +32,7 @@ const Engineers: React.FC = () => {
   const [error, setError] = useState('');
   const [isEngineerFormOpen, setIsEngineerFormOpen] = useState(false);
   const [isAssignmentFormOpen, setIsAssignmentFormOpen] = useState(false);
-  const [selectedEngineer, setSelectedEngineer] = useState<any>(null);
+  const [selectedEngineer, setSelectedEngineer] = useState<EngineerWithAssignments | null>(null);
 
   useEffect(() => {
     fetchEngineers();
@@ -116,8 +42,8 @@ const Engineers: React.FC = () => {
     try {
       setLoading(true);
       const response = await engineerService.getAllEngineers();
-      if (response.success) {
-        setEngineers(response.data || []);
+      if (response.success && response.data) {
+        setEngineers(response.data.engineers || []);
       } else {
         setError('Failed to load engineers');
       }
@@ -144,12 +70,6 @@ const Engineers: React.FC = () => {
     return matchesSearch && matchesSkill && matchesSeniority;
   });
 
-  const getCapacityStatus = (capacity: number, maxCapacity: number) => {
-    const percentage = (capacity / maxCapacity) * 100;
-    if (percentage >= 90) return { status: 'overloaded', color: 'text-red-600', bgColor: 'bg-red-100' };
-    if (percentage >= 70) return { status: 'busy', color: 'text-yellow-600', bgColor: 'bg-yellow-100' };
-    return { status: 'available', color: 'text-green-600', bgColor: 'bg-green-100' };
-  };
 
   const getSeniorityIcon = (seniority: string) => {
     switch (seniority) {
@@ -235,10 +155,7 @@ const Engineers: React.FC = () => {
       {!loading && !error && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredEngineers.map((engineer) => {
-          const maxCapacity = engineer.maxCapacity || 100;
-          const currentCapacity = engineer.currentCapacity || 0;
-          const capacityStatus = getCapacityStatus(currentCapacity, maxCapacity);
-          const capacityPercentage = (currentCapacity / maxCapacity) * 100;
+          const capacityInfo = getCapacityInfo(engineer);
           
           return (
             <Card key={engineer._id} className="hover:shadow-lg transition-shadow">
@@ -258,7 +175,7 @@ const Engineers: React.FC = () => {
                       </div>
                     </div>
                   </div>
-                  {capacityStatus.status === 'overloaded' && (
+                  {capacityInfo.status === 'overloaded' && (
                     <AlertTriangle className="h-5 w-5 text-red-500" />
                   )}
                 </div>
@@ -293,18 +210,24 @@ const Engineers: React.FC = () => {
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-sm font-medium text-gray-700">Capacity</p>
-                    <span className={`text-sm font-medium ${capacityStatus.color}`}>
-                      {currentCapacity}% / {maxCapacity}%
+                    <span className={`text-sm font-medium ${
+                      capacityInfo.status === 'overloaded' ? 'text-red-600' :
+                      capacityInfo.status === 'busy' ? 'text-yellow-600' : 'text-green-600'
+                    }`}>
+                      {capacityInfo.currentUtilization}% / {capacityInfo.maxCapacity}%
                     </span>
                   </div>
                   <Progress 
-                    value={capacityPercentage} 
+                    value={capacityInfo.utilizationPercentage} 
                     className="h-2"
                   />
-                  <div className={`mt-1 px-2 py-1 rounded-full text-xs font-medium inline-block ${capacityStatus.bgColor} ${capacityStatus.color}`}>
-                    {capacityStatus.status === 'overloaded' && 'Overloaded'}
-                    {capacityStatus.status === 'busy' && 'Busy'}
-                    {capacityStatus.status === 'available' && 'Available'}
+                  <div className={`mt-1 px-2 py-1 rounded-full text-xs font-medium inline-block ${
+                    capacityInfo.status === 'overloaded' ? 'bg-red-100 text-red-600' :
+                    capacityInfo.status === 'busy' ? 'bg-yellow-100 text-yellow-600' : 'bg-green-100 text-green-600'
+                  }`}>
+                    {capacityInfo.status === 'overloaded' && 'Overloaded'}
+                    {capacityInfo.status === 'busy' && 'Busy'}
+                    {capacityInfo.status === 'available' && 'Available'}
                   </div>
                 </div>
 
@@ -312,11 +235,11 @@ const Engineers: React.FC = () => {
                 <div>
                   <p className="text-sm font-medium text-gray-700 mb-2">Current Projects</p>
                   <div className="space-y-1">
-                    {(engineer.assignments || []).length === 0 ? (
+                    {(!engineer.assignments || engineer.assignments.length === 0) ? (
                       <p className="text-sm text-gray-500">No active projects</p>
                     ) : (
                       engineer.assignments.slice(0, 3).map((assignment, index) => (
-                        <div key={index} className="flex items-center justify-between text-sm">
+                        <div key={assignment._id || index} className="flex items-center justify-between text-sm">
                           <span className="text-gray-600 truncate">Project {index + 1}</span>
                           <span className="text-gray-500 ml-2">{assignment.allocationPercentage}%</span>
                         </div>
@@ -372,46 +295,45 @@ const Engineers: React.FC = () => {
       )}
 
       {/* Summary Stats */}
-      {!loading && !error && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Card>
-            <CardContent className="p-4 text-center">
-              <p className="text-2xl font-bold text-green-600">
-                {filteredEngineers.filter(e => {
-                  const capacity = e.currentCapacity || 0;
-                  const maxCap = e.maxCapacity || 100;
-                  return getCapacityStatus(capacity, maxCap).status === 'available';
-                }).length}
-              </p>
-              <p className="text-sm text-gray-600">Available Engineers</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 text-center">
-              <p className="text-2xl font-bold text-yellow-600">
-                {filteredEngineers.filter(e => {
-                  const capacity = e.currentCapacity || 0;
-                  const maxCap = e.maxCapacity || 100;
-                  return getCapacityStatus(capacity, maxCap).status === 'busy';
-                }).length}
-              </p>
-              <p className="text-sm text-gray-600">Busy Engineers</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 text-center">
-              <p className="text-2xl font-bold text-red-600">
-                {filteredEngineers.filter(e => {
-                  const capacity = e.currentCapacity || 0;
-                  const maxCap = e.maxCapacity || 100;
-                  return getCapacityStatus(capacity, maxCap).status === 'overloaded';
-                }).length}
-              </p>
-              <p className="text-sm text-gray-600">Overloaded Engineers</p>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+      {!loading && !error && (() => {
+        const teamStats = getTeamCapacityStats(filteredEngineers);
+        return (
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+            <Card>
+              <CardContent className="p-4 text-center">
+                <p className="text-2xl font-bold text-green-600">
+                  {teamStats.availableEngineers}
+                </p>
+                <p className="text-sm text-gray-600">Available Engineers</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4 text-center">
+                <p className="text-2xl font-bold text-yellow-600">
+                  {teamStats.busyEngineers}
+                </p>
+                <p className="text-sm text-gray-600">Busy Engineers</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4 text-center">
+                <p className="text-2xl font-bold text-red-600">
+                  {teamStats.overloadedEngineers}
+                </p>
+                <p className="text-sm text-gray-600">Overloaded Engineers</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4 text-center">
+                <p className="text-2xl font-bold text-blue-600">
+                  {Math.round(teamStats.teamUtilizationPercentage)}%
+                </p>
+                <p className="text-sm text-gray-600">Team Utilization</p>
+              </CardContent>
+            </Card>
+          </div>
+        );
+      })()}
 
       {/* Forms */}
       <EngineerForm

@@ -4,16 +4,23 @@ import api from './api';
 import type { ApiResponse } from './authService';
 // import { ApiResponse } from './authService';
 
+interface SkillRequirement {
+  skill: string;
+  level: 'beginner' | 'intermediate' | 'advanced' | 'expert';
+  count: number;
+}
+
 export interface CreateProjectData {
   name: string;
   description: string;
   startDate: string;
   endDate: string;
-  requiredSkills: string[];
+  requiredSkills?: SkillRequirement[];
   teamSize: number;
   status?: 'planning' | 'active' | 'completed';
   budget?: number;
-  priority?: 'low' | 'medium' | 'high';
+  priority?: 'low' | 'medium' | 'high' | 'critical';
+  managerId?: string;
 }
 
 export const projectService = {
@@ -22,7 +29,7 @@ export const projectService = {
     priority?: string;
     managerId?: string;
     skills?: string;
-  }): Promise<ApiResponse<ProjectWithAssignments[]>> {
+  }): Promise<ApiResponse<{projects: ProjectWithAssignments[]}>> {
     const params = new URLSearchParams();
     if (filters?.status) params.append('status', filters.status);
     if (filters?.priority) params.append('priority', filters.priority);

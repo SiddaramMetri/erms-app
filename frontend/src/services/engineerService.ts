@@ -19,7 +19,7 @@ export const engineerService = {
     seniority?: string;
     department?: string;
     available?: boolean;
-  }): Promise<ApiResponse<EngineerWithAssignments[]>> {
+  }): Promise<ApiResponse<{engineers: EngineerWithAssignments[]}>> {
     const params = new URLSearchParams();
     if (filters?.skills) params.append('skills', filters.skills);
     if (filters?.seniority) params.append('seniority', filters.seniority);
@@ -52,7 +52,7 @@ export const engineerService = {
   },
 
   async findSuitableEngineers(requiredSkills: string[], minimumCapacity?: number): Promise<ApiResponse<EngineerWithAssignments[]>> {
-    const response = await api.post('/engineers/suitable', {
+    const response = await api.post('/engineers/find-suitable', {
       requiredSkills,
       minimumCapacity,
     });

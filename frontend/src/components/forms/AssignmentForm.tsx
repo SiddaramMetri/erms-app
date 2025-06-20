@@ -3,16 +3,18 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Modal from '@/components/ui/modal';
-import { Loader2, Calendar, User, Target } from 'lucide-react';
+import { Loader2, Calendar, Target } from 'lucide-react';
 import { engineerService } from '@/services/engineerService';
 import { projectService } from '@/services/projectService';
 import { assignmentService, type CreateAssignmentData } from '@/services/assignmentService';
+
+import type { Assignment, EngineerWithAssignments, Project } from '@/types';
 
 interface AssignmentFormProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
-  assignment?: any; // For editing existing assignment
+  assignment?: Assignment | null;
 }
 
 interface FormData {
@@ -21,7 +23,7 @@ interface FormData {
   allocationPercentage: number;
   startDate: string;
   endDate: string;
-  role: string;
+  role: 'Developer' | 'Senior Developer' | 'Tech Lead' | 'Architect' | 'QA Engineer' | 'DevOps Engineer' | 'Product Manager' | 'Designer' | '';
 }
 
 const AssignmentForm: React.FC<AssignmentFormProps> = ({
@@ -34,13 +36,13 @@ const AssignmentForm: React.FC<AssignmentFormProps> = ({
     engineerId: assignment?.engineerId || '',
     projectId: assignment?.projectId || '',
     allocationPercentage: assignment?.allocationPercentage || 50,
-    startDate: assignment?.startDate ? assignment.startDate.split('T')[0] : '',
-    endDate: assignment?.endDate ? assignment.endDate.split('T')[0] : '',
-    role: assignment?.role || ''
+    startDate: assignment?.startDate ? new Date(assignment.startDate).toISOString().split('T')[0] : '',
+    endDate: assignment?.endDate ? new Date(assignment.endDate).toISOString().split('T')[0] : '',
+    role: (assignment?.role as FormData['role']) || ''
   });
 
-  const [engineers, setEngineers] = useState<any[]>([]);
-  const [projects, setProjects] = useState<any[]>([]);
+  const [engineers, setEngineers] = useState<EngineerWithAssignments[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(true);
@@ -61,11 +63,11 @@ const AssignmentForm: React.FC<AssignmentFormProps> = ({
         projectService.getAllProjects()
       ]);
 
-      if (engineersResponse.success) {
-        setEngineers(engineersResponse.data || []);
+      if (engineersResponse.success && engineersResponse.data) {
+        setEngineers(engineersResponse.data.engineers || []);
       }
-      if (projectsResponse.success) {
-        setProjects(projectsResponse.data || []);
+      if (projectsResponse.success && projectsResponse.data) {
+        setProjects(projectsResponse.data.projects || []);
       }
     } catch (error) {
       console.error('Error loading data:', error);
@@ -85,7 +87,7 @@ const AssignmentForm: React.FC<AssignmentFormProps> = ({
       newErrors.projectId = 'Project is required';
     }
 
-    if (!formData.role.trim()) {
+    if (!formData.role || formData.role.trim() === '') {
       newErrors.role = 'Role/Position is required';
     }
 
@@ -108,9 +110,9 @@ const AssignmentForm: React.FC<AssignmentFormProps> = ({
     // Check engineer capacity
     const selectedEngineer = engineers.find(eng => eng._id === formData.engineerId);
     if (selectedEngineer) {
-      const currentCapacity = selectedEngineer.currentCapacity || 0;
+      const currentCapacity = selectedEngineer.currentUtilization || 0;
       const maxCapacity = selectedEngineer.maxCapacity || 100;
-      const availableCapacity = maxCapacity - currentCapacity;
+      const availableCapacity = selectedEngineer.availableCapacity || (maxCapacity - currentCapacity);
       
       if (formData.allocationPercentage > availableCapacity) {
         newErrors.allocationPercentage = `Engineer only has ${availableCapacity}% capacity available`;
@@ -139,14 +141,20 @@ const AssignmentForm: React.FC<AssignmentFormProps> = ({
           allocationPercentage: formData.allocationPercentage,
           startDate: formData.startDate,
           endDate: formData.endDate,
-          role: formData.role
+          role: formData.role as Exclude<FormData['role'], ''>
         };
-        response = await assignmentService.updateAssignment(assignment._id, updateData);
+        response = await assignmentService.updateAssignment(assignment!._id, updateData);
       } else {
         const submitData: CreateAssignmentData = {
-          ...formData,
-          status: 'active' as const
+          engineerId: formData.engineerId,
+          projectId: formData.projectId,
+          allocationPercentage: formData.allocationPercentage,
+          startDate: formData.startDate,
+          endDate: formData.endDate,
+          role: formData.role as CreateAssignmentData['role'],
+          status: 'planned' as const
         };
+        console.log('Submitting assignment data:', submitData);
         response = await assignmentService.createAssignment(submitData);
       }
 
@@ -157,8 +165,8 @@ const AssignmentForm: React.FC<AssignmentFormProps> = ({
       } else {
         setErrors({ submit: response.message || 'Something went wrong' });
       }
-    } catch (error: any) {
-      setErrors({ submit: error.message || 'Failed to save assignment' });
+    } catch (error: unknown) {
+      setErrors({ submit: (error as Error).message || 'Failed to save assignment' });
     } finally {
       setIsLoading(false);
     }
@@ -189,9 +197,9 @@ const AssignmentForm: React.FC<AssignmentFormProps> = ({
     const engineer = engineers.find(eng => eng._id === engineerId);
     if (!engineer) return null;
 
-    const currentCapacity = engineer.currentCapacity || 0;
+    const currentCapacity = engineer.currentUtilization || 0;
     const maxCapacity = engineer.maxCapacity || 100;
-    const availableCapacity = maxCapacity - currentCapacity;
+    const availableCapacity = engineer.availableCapacity || (maxCapacity - currentCapacity);
 
     return {
       current: currentCapacity,
@@ -277,7 +285,7 @@ const AssignmentForm: React.FC<AssignmentFormProps> = ({
             <option value="">Choose a project...</option>
             {projects.filter(p => p.status !== 'completed').map((project) => (
               <option key={project._id} value={project._id}>
-                {project.name} - {project.priority} priority
+                {project.name} - {(project as any).priority || 'medium'} priority
               </option>
             ))}
           </select>
@@ -287,13 +295,22 @@ const AssignmentForm: React.FC<AssignmentFormProps> = ({
         {/* Role */}
         <div className="space-y-2">
           <Label htmlFor="role">Role/Position *</Label>
-          <Input
+          <select
             id="role"
             value={formData.role}
-            onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value }))}
-            placeholder="e.g., Frontend Developer, Team Lead, DevOps Engineer"
-            className={errors.role ? 'border-red-500' : ''}
-          />
+            onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value as FormData['role'] }))}
+            className={`flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring ${errors.role ? 'border-red-500' : ''}`}
+          >
+            <option value="">Select a role...</option>
+            <option value="Developer">Developer</option>
+            <option value="Senior Developer">Senior Developer</option>
+            <option value="Tech Lead">Tech Lead</option>
+            <option value="Architect">Architect</option>
+            <option value="QA Engineer">QA Engineer</option>
+            <option value="DevOps Engineer">DevOps Engineer</option>
+            <option value="Product Manager">Product Manager</option>
+            <option value="Designer">Designer</option>
+          </select>
           {errors.role && <p className="text-sm text-red-600">{errors.role}</p>}
         </div>
 

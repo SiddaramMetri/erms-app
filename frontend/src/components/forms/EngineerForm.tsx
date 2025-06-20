@@ -6,15 +6,17 @@ import { Badge } from '@/components/ui/badge';
 import Modal from '@/components/ui/modal';
 import { X, Plus, Loader2 } from 'lucide-react';
 import { engineerService, type CreateEngineerData } from '@/services/engineerService';
+import { validateForm as validateFormData } from '@/utils/formValidation';
+import type { EngineerWithAssignments } from '@/types';
 
 interface EngineerFormProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
-  engineer?: any; // For editing existing engineer
+  engineer?: EngineerWithAssignments | null;
 }
 
-interface FormData {
+interface FormData extends Record<string, unknown> {
   name: string;
   email: string;
   password: string;
@@ -47,38 +49,25 @@ const EngineerForm: React.FC<EngineerFormProps> = ({
   const isEditing = !!engineer;
 
   const validateForm = (): boolean => {
-    const newErrors: Record<string, string> = {};
+    const validationRules = {
+      name: { required: true, minLength: 2, maxLength: 100 },
+      email: { required: true, email: true },
+      ...(isEditing ? {} : { password: { required: true, minLength: 6 } }),
+      department: { required: true, minLength: 2, maxLength: 50 },
+      maxCapacity: { required: true, min: 1, max: 100 },
+      skills: {
+        required: true,
+        custom: (value: unknown) => {
+          if (!Array.isArray(value)) return 'Skills must be an array';
+          if (value.length === 0) return 'At least one skill is required';
+          return null;
+        }
+      }
+    };
 
-    if (!formData.name.trim()) {
-      newErrors.name = 'Name is required';
-    }
-
-    if (!formData.email.trim()) {
-      newErrors.email = 'Email is required';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email address';
-    }
-
-    if (!isEditing && !formData.password.trim()) {
-      newErrors.password = 'Password is required';
-    } else if (!isEditing && formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
-    }
-
-    if (!formData.department.trim()) {
-      newErrors.department = 'Department is required';
-    }
-
-    if (formData.maxCapacity < 1 || formData.maxCapacity > 100) {
-      newErrors.maxCapacity = 'Max capacity must be between 1 and 100';
-    }
-
-    if (formData.skills.length === 0) {
-      newErrors.skills = 'At least one skill is required';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    const result = validateFormData(formData, validationRules);
+    setErrors(result.errors);
+    return result.isValid;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -101,7 +90,7 @@ const EngineerForm: React.FC<EngineerFormProps> = ({
           maxCapacity: formData.maxCapacity,
           department: formData.department
         };
-        response = await engineerService.updateEngineer(engineer._id, updateData);
+        response = await engineerService.updateEngineer(engineer!._id, updateData);
       } else {
         // Create new engineer via registration
         const submitData: CreateEngineerData = {

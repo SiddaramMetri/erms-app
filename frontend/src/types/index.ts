@@ -32,9 +32,11 @@ export interface Assignment {
 }
 
 export interface EngineerWithAssignments extends User {
-  assignments: Assignment[];
-  currentCapacity: number;
-  availableCapacity: number;
+  assignments?: Assignment[];
+  currentAssignments?: Assignment[];
+  currentCapacity?: number;
+  currentUtilization?: number;
+  availableCapacity?: number;
 }
 
 export interface ProjectWithAssignments extends Project {

@@ -16,7 +16,6 @@ import {
   PlayCircle,
   FolderOpen,
   Edit,
-  Settings
 } from 'lucide-react';
 import ProjectForm from '@/components/forms/ProjectForm';
 

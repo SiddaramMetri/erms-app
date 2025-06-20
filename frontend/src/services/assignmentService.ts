@@ -8,8 +8,8 @@ export interface CreateAssignmentData {
   allocationPercentage: number;
   startDate: string;
   endDate: string;
-  role: string;
-  status?: 'pending' | 'active' | 'completed';
+  role: 'Developer' | 'Senior Developer' | 'Tech Lead' | 'Architect' | 'QA Engineer' | 'DevOps Engineer' | 'Product Manager' | 'Designer';
+  status?: 'planned' | 'active' | 'completed' | 'cancelled';
 }
 
 export const assignmentService = {

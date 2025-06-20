@@ -9,7 +9,7 @@ interface AuthContextType extends AuthState {
   isLoading: boolean;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 type AuthAction =
   | { type: 'LOGIN_START' }
@@ -95,12 +95,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const response = await authService.login(email, password);
       
       if (response.success) {
-        const { user, token } = response.data;
+        const { engineer, accessToken } = response.data;
         
-        localStorage.setItem('token', token);
-        localStorage.setItem('user', JSON.stringify(user));
+        localStorage.setItem('token', accessToken);
+        localStorage.setItem('user', JSON.stringify(engineer));
         
-        dispatch({ type: 'LOGIN_SUCCESS', payload: { user, token } });
+        dispatch({ type: 'LOGIN_SUCCESS', payload: { user: engineer, token: accessToken } });
       } else {
         throw new Error('Invalid credentials');
       }

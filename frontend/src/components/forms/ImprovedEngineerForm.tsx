@@ -52,10 +52,11 @@ const ImprovedEngineerForm: React.FC<EngineerFormProps> = ({
     email: commonRules.email,
     password: isEditing ? { minLength: 6 } : commonRules.password,
     department: { required: true, minLength: 2 },
+    seniority: { required: true },
     maxCapacity: { required: true, min: 1, max: 100 },
     skills: {
       required: true,
-      custom: (value: string[]) => 
+      custom: (value: unknown) => 
         Array.isArray(value) && value.length > 0 ? null : 'At least one skill is required'
     }
   };

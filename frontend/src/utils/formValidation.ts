@@ -1,4 +1,4 @@
-export interface ValidationRule {
+export interface ValidationRule<T = unknown> {
   required?: boolean;
   minLength?: number;
   maxLength?: number;
@@ -6,7 +6,7 @@ export interface ValidationRule {
   min?: number;
   max?: number;
   email?: boolean;
-  custom?: (value: any) => string | null;
+  custom?: (value: T) => string | null;
 }
 
 export interface ValidationResult {
@@ -14,10 +14,10 @@ export interface ValidationResult {
   errors: Record<string, string>;
 }
 
-export const validateField = (
-  value: any,
+export const validateField = <T>(
+  value: T,
   fieldName: string,
-  rules: ValidationRule
+  rules: ValidationRule<T>
 ): string | null => {
   // Required validation
   if (rules.required) {
@@ -75,9 +75,9 @@ export const validateField = (
   return null;
 };
 
-export const validateForm = (
-  data: Record<string, any>,
-  rules: Record<string, ValidationRule>
+export const validateForm = <T extends Record<string, unknown>>(
+  data: T,
+  rules: { [K in keyof T]?: ValidationRule<T[K]> }
 ): ValidationResult => {
   const errors: Record<string, string> = {};
 
@@ -102,8 +102,18 @@ export const commonRules = {
   description: { required: true, minLength: 10, maxLength: 1000 },
   percentage: { required: true, min: 1, max: 100 },
   positiveNumber: { required: true, min: 0 },
+  capacity: { required: true, min: 1, max: 100 },
+  department: { required: true, minLength: 2, maxLength: 50 },
   requiredArray: { 
     required: true, 
-    custom: (value: any[]) => Array.isArray(value) && value.length > 0 ? null : 'At least one item is required'
+    custom: (value: unknown) => Array.isArray(value) && value.length > 0 ? null : 'At least one item is required'
+  },
+  skills: {
+    required: true,
+    custom: (value: unknown) => {
+      if (!Array.isArray(value)) return 'Skills must be an array';
+      if (value.length === 0) return 'At least one skill is required';
+      return null;
+    }
   }
 };

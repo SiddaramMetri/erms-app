@@ -6,8 +6,9 @@ export interface LoginResponse {
   success: boolean;
   message: string;
   data: {
-    user: User;
-    token: string;
+    engineer: User;
+    accessToken: string;
+    refreshToken: string;
   };
 }
 
@@ -24,7 +25,7 @@ export const authService = {
     return response.data;
   },
 
-  async register(userData: any): Promise<ApiResponse<{ user: User; token: string }>> {
+  async register(userData: any): Promise<ApiResponse<{ engineer: User; accessToken: string; refreshToken: string }>> {
     const response = await api.post('/auth/register', userData);
     return response.data;
   },
