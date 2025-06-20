@@ -7,7 +7,8 @@ import {
   deleteEngineer,
   getEngineerCapacity,
   getEngineerAssignments,
-  searchEngineersBySkill
+  searchEngineersBySkill,
+  findSuitableEngineersForProject
 } from '../controllers/engineerController.js';
 
 const router = express.Router();
@@ -15,6 +16,7 @@ const router = express.Router();
 // Public routes (with authentication)
 router.get('/', authenticateToken, getAllEngineers);
 router.get('/search/skill', authenticateToken, searchEngineersBySkill);
+router.post('/find-suitable', authenticateToken, findSuitableEngineersForProject);
 router.get('/:id', authenticateToken, canAccessEngineer, getEngineerById);
 router.get('/:id/capacity', authenticateToken, canAccessEngineer, getEngineerCapacity);
 router.get('/:id/assignments', authenticateToken, canAccessEngineer, getEngineerAssignments);

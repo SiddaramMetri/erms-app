@@ -264,3 +264,63 @@ export const searchEngineersBySkill = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+export const findSuitableEngineersForProject = async (req, res) => {
+  try {
+    const { requiredSkills, minimumCapacity = 10 } = req.body;
+
+    if (!requiredSkills || !Array.isArray(requiredSkills) || requiredSkills.length === 0) {
+      return res.status(400).json({ error: 'Required skills array is required' });
+    }
+
+    // Find engineers with any of the required skills
+    const engineers = await Engineer.find({
+      isActive: true,
+      'skills.skill': { $in: requiredSkills.map(skill => new RegExp(skill, 'i')) }
+    }).select('-password');
+
+    // Get capacity info for each engineer and calculate skill match
+    const suitableEngineers = await Promise.all(
+      engineers.map(async (engineer) => {
+        const allocations = await Assignment.getEngineerCurrentAllocation(engineer._id);
+        const currentUtilization = allocations.length > 0 ? allocations[0].totalAllocation : 0;
+        const availableCapacity = Math.max(0, engineer.maxCapacity - currentUtilization);
+        
+        // Calculate skill match percentage
+        const engineerSkills = engineer.skills.map(s => s.skill);
+        const matchingSkills = requiredSkills.filter(reqSkill =>
+          engineerSkills.some(engSkill => 
+            engSkill.toLowerCase().includes(reqSkill.toLowerCase()) ||
+            reqSkill.toLowerCase().includes(engSkill.toLowerCase())
+          )
+        );
+        const skillMatchPercentage = (matchingSkills.length / requiredSkills.length) * 100;
+        
+        return {
+          ...engineer.toJSON(),
+          currentUtilization,
+          availableCapacity,
+          skillMatchPercentage,
+          matchingSkills,
+          isAvailable: availableCapacity >= minimumCapacity
+        };
+      })
+    );
+
+    // Filter and sort by availability and skill match
+    const filteredEngineers = suitableEngineers
+      .filter(eng => eng.availableCapacity >= minimumCapacity)
+      .sort((a, b) => b.skillMatchPercentage - a.skillMatchPercentage);
+
+    res.json({
+      success: true,
+      data: {
+        engineers: filteredEngineers,
+        searchCriteria: { requiredSkills, minimumCapacity },
+        totalFound: filteredEngineers.length
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
