@@ -136,9 +136,42 @@ export const updateAssignment = async (req, res) => {
       return res.status(400).json({ error: error.details[0].message });
     }
 
+    let { engineerId, projectId } = req.body;
+
+    // Extract IDs if they're objects (from populated data)
+    if (engineerId && typeof engineerId === 'object') {
+      engineerId = engineerId._id;
+    }
+    if (projectId && typeof projectId === 'object') {
+      projectId = projectId._id;
+    }
+
+    // Validate engineer if being updated
+    if (engineerId) {
+      const engineer = await User.findOne({ _id: engineerId, role: 'engineer', isActive: true });
+      if (!engineer) {
+        return res.status(404).json({ error: 'Engineer not found' });
+      }
+    }
+
+    // Validate project if being updated
+    if (projectId) {
+      const project = await Project.findById(projectId);
+      if (!project) {
+        return res.status(404).json({ error: 'Project not found' });
+      }
+    }
+
+    // Prepare update data with extracted IDs
+    const updateData = {
+      ...req.body,
+      ...(engineerId && { engineerId }),
+      ...(projectId && { projectId })
+    };
+
     const assignment = await Assignment.findByIdAndUpdate(
       req.params.id,
-      req.body,
+      updateData,
       { new: true, runValidators: true }
     )
     .populate('engineerId', 'name email seniority department')

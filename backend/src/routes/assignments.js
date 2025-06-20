@@ -14,6 +14,10 @@ const router = express.Router();
 
 router.get('/', authenticateToken, getAllAssignments);
 
+router.get('/active', authenticateToken, getActiveAssignments);
+
+router.get('/current', authenticateToken, getCurrentAssignments);
+
 router.get('/:id', authenticateToken, getAssignmentById);
 
 router.post('/', authenticateToken, requireManagerOrAdmin, createAssignment);
@@ -21,9 +25,5 @@ router.post('/', authenticateToken, requireManagerOrAdmin, createAssignment);
 router.put('/:id', authenticateToken, requireManagerOrAdmin, updateAssignment);
 
 router.delete('/:id', authenticateToken, requireManagerOrAdmin, deleteAssignment);
-
-router.get('/active', authenticateToken, getActiveAssignments);
-
-router.get('/current', authenticateToken, getCurrentAssignments);
 
 export default router;

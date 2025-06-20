@@ -6,9 +6,21 @@ export const validateRegister = (data) => {
     name: Joi.string().min(2).max(100).required(),
     email: Joi.string().email().required(),
     password: Joi.string().min(6).required(),
-    department: Joi.string().min(2).max(50).required(),
-    seniority: Joi.string().valid('junior', 'mid', 'senior', 'lead').optional(),
-    maxCapacity: Joi.number().min(1).max(100).optional(),
+    department: Joi.string().min(2).max(50).when('role', {
+      is: 'engineer',
+      then: Joi.required(),
+      otherwise: Joi.optional()
+    }),
+    seniority: Joi.string().valid('junior', 'mid', 'senior', 'lead').when('role', {
+      is: 'engineer', 
+      then: Joi.optional(),
+      otherwise: Joi.forbidden()
+    }),
+    maxCapacity: Joi.number().min(1).max(100).when('role', {
+      is: 'engineer',
+      then: Joi.optional(),
+      otherwise: Joi.forbidden()
+    }),
     hourlyRate: Joi.number().min(0).optional(),
     skills: Joi.array().items(
       Joi.object({
@@ -31,26 +43,28 @@ export const validateLogin = (data) => {
   return schema.validate(data);
 };
 
-export const validateEngineerUpdate = (data) => {
+export const validateUserUpdate = (data) => {
   const schema = Joi.object({
     name: Joi.string().min(2).max(100).optional(),
     email: Joi.string().email().optional(),
     department: Joi.string().min(2).max(50).optional(),
-    seniority: Joi.string().valid('junior', 'mid', 'senior', 'lead').optional(),
+    seniority: Joi.string().valid('junior', 'mid', 'senior').optional(),
     maxCapacity: Joi.number().min(1).max(100).optional(),
-    hourlyRate: Joi.number().min(0).optional(),
     skills: Joi.array().items(
       Joi.object({
         skill: Joi.string().required(),
         level: Joi.string().valid('beginner', 'intermediate', 'advanced', 'expert').required()
       })
     ).optional(),
-    role: Joi.string().valid('engineer', 'manager', 'admin').optional(),
+    role: Joi.string().valid('engineer', 'manager').optional(),
     isActive: Joi.boolean().optional()
   });
 
   return schema.validate(data);
 };
+
+// Keep backward compatibility
+export const validateEngineerUpdate = validateUserUpdate;
 
 // Project validation schemas
 export const validateProject = (data) => {
@@ -112,9 +126,9 @@ export const validateAssignment = (data) => {
     allocationPercentage: Joi.number().min(1).max(100).required(),
     startDate: Joi.date().required(),
     endDate: Joi.date().greater(Joi.ref('startDate')).required(),
-    role: Joi.string().valid('Developer', 'Senior Developer', 'Tech Lead', 'Architect', 'QA Engineer', 'DevOps Engineer', 'Product Manager', 'Designer').required(),
-    status: Joi.string().valid('planned', 'active', 'completed', 'cancelled').optional(),
-    notes: Joi.string().max(500).optional(),
+    role: Joi.string().valid('developer', 'lead', 'architect', 'tester', 'devops', 'analyst', 'designer').required(),
+    status: Joi.string().valid('active', 'completed', 'cancelled').optional(),
+    notes: Joi.string().max(500).allow('').optional(),
     estimatedHours: Joi.number().min(0).optional(),
     billableRate: Joi.number().min(0).optional()
   });
@@ -124,12 +138,24 @@ export const validateAssignment = (data) => {
 
 export const validateAssignmentUpdate = (data) => {
   const schema = Joi.object({
+    engineerId: Joi.alternatives().try(
+      Joi.string(),
+      Joi.object().keys({
+        _id: Joi.string().required()
+      }).unknown(true)
+    ).optional(),
+    projectId: Joi.alternatives().try(
+      Joi.string(),
+      Joi.object().keys({
+        _id: Joi.string().required()
+      }).unknown(true)
+    ).optional(),
     allocationPercentage: Joi.number().min(1).max(100).optional(),
     startDate: Joi.date().optional(),
     endDate: Joi.date().optional(),
-    role: Joi.string().valid('Developer', 'Senior Developer', 'Tech Lead', 'Architect', 'QA Engineer', 'DevOps Engineer', 'Product Manager', 'Designer').optional(),
-    status: Joi.string().valid('planned', 'active', 'completed', 'cancelled').optional(),
-    notes: Joi.string().max(500).optional(),
+    role: Joi.string().valid('developer', 'lead', 'architect', 'tester', 'devops', 'analyst', 'designer').optional(),
+    status: Joi.string().valid('active', 'completed', 'cancelled').optional(),
+    notes: Joi.string().max(500).allow('').optional(),
     estimatedHours: Joi.number().min(0).optional(),
     actualHours: Joi.number().min(0).optional(),
     billableRate: Joi.number().min(0).optional(),

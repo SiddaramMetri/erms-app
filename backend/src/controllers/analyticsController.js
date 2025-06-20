@@ -1,4 +1,4 @@
-import { Engineer, Project, Assignment } from '../models/index.js';
+import { User, Project, Assignment } from '../models/index.js';
 
 export const getTeamUtilization = async (req, res) => {
   try {
@@ -7,11 +7,11 @@ export const getTeamUtilization = async (req, res) => {
     const query = { isActive: true };
     if (department) query.department = department;
 
-    const engineers = await Engineer.find(query).select('-password');
+    const engineers = await User.find(query).select('-password');
     
     const utilizationData = await Promise.all(
       engineers.map(async (engineer) => {
-        const allocations = await Assignment.getEngineerCurrentAllocation(engineer._id);
+        const allocations = await Assignment.getUserCurrentAllocation(engineer._id);
         const currentUtilization = allocations.length > 0 ? allocations[0].totalAllocation : 0;
         
         return {
@@ -35,7 +35,7 @@ export const getTeamUtilization = async (req, res) => {
       data: {
         engineers: utilizationData,
         teamStats: {
-          totalEngineers: engineers.length,
+          totalUsers: engineers.length,
           totalCapacity,
           totalUtilized,
           teamUtilizationRate: totalCapacity > 0 ? (totalUtilized / totalCapacity) * 100 : 0,
@@ -55,7 +55,7 @@ export const getSkillGaps = async (req, res) => {
       status: { $in: ['planning', 'active'] } 
     });
 
-    const engineers = await Engineer.find({ isActive: true }).select('-password');
+    const engineers = await User.find({ isActive: true }).select('-password');
 
     const skillAnalysis = {};
 
